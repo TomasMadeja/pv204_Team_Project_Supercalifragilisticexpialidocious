@@ -103,3 +103,6 @@ nbbuild/
 dist/
 nbdist/
 .nb-gradle/
+
+# Additional IDEA .gitignore
+.idea/*.xml

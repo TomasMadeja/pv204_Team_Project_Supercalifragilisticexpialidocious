@@ -1,1 +1,0 @@
-Contains Interface for interacting with Javacard Applet from the Host machine

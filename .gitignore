@@ -106,3 +106,4 @@ nbdist/
 
 # Additional IDEA .gitignore
 .idea/*.xml
+.idea

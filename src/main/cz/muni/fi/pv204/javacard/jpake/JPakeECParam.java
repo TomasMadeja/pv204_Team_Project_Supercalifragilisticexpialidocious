@@ -1,6 +1,6 @@
 package cz.muni.fi.pv204.javacard.jpake;
 
-public class JPAKEPrimeOrderGroup {
+public class JPakeECParam {
 
     public final byte[] m;
     public final byte[] f;
@@ -10,7 +10,7 @@ public class JPAKEPrimeOrderGroup {
     public final byte[] n;
     public final byte[] h;
 
-    JPAKEPrimeOrderGroup(
+    JPakeECParam(
             byte[] m,
             byte[] f,
             byte[] a,

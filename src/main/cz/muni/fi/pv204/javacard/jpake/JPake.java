@@ -2,7 +2,7 @@ package cz.muni.fi.pv204.javacard.jpake;
 
 public class JPake {
 
-    private JPAKEPrimeOrderGroup group; // TODO set some default
+    private JPakeECParam group; // TODO set some default
 
     public JPake(
             char[] participantID,
@@ -13,7 +13,7 @@ public class JPake {
     public JPake(
             char[] participantID,
             byte[] password,
-            JPAKEPrimeOrderGroup group,
+            JPakeECParam group,
             byte digest
     ) { }
 

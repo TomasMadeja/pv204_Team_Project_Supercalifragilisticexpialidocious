@@ -2,10 +2,7 @@ package cz.muni.fi.pv204.javacard.jpake;
 
 import javacard.framework.*;
 import cz.muni.fi.pv204.javacard.jcmathlib.*;
-import javacard.security.ECPublicKey;
-import javacard.security.KeyAgreement;
-import javacard.security.KeyBuilder;
-import javacard.security.KeyPair;
+import javacard.security.*;
 
 
 public class JPakeECParam extends Applet {
@@ -23,7 +20,8 @@ public class JPakeECParam extends Applet {
     final static short INS_MUL = (short) 0x43;
     final static short INS_GEN_SS = (short) 0x44;
 
-
+    private byte[] sharedSecret= null;
+    private AESKey sessionKey=null;
     ECConfig ecc =null;
     ECCurve curve= null;
     ECPoint point1 =null;
@@ -98,7 +96,7 @@ public class JPakeECParam extends Applet {
     }
 public void genSecret(APDU apdu)
 {
-    // get host publice key, gen shared secret and send card public key to host 
+    // get host publice key, gen shared secret and send card public key to host
     byte[] buffer= apdu.getBuffer();
     byte[] temp = new byte[200];
     short len= apdu.setIncomingAndReceive();
@@ -107,12 +105,18 @@ public void genSecret(APDU apdu)
     kpCard.genKeyPair();
     KeyAgreement kaCard =KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH,false);
     kaCard.init(kpCard.getPrivate());
-    byte[] sharedSecret = new byte[50];
+    sharedSecret = new byte[50];
     kaCard.generateSecret(buffer,(short) 0, (short)buffer.length, sharedSecret,(byte)0);
     len = ((ECPublicKey)kpCard.getPublic()).getW(temp,(short)0);
     Util.arrayCopy(temp, (short)0,buffer, ISO7816.OFFSET_CDATA,(short)0);
     apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA,(short)len);
-
+    getSessionKey();
 }
+public void getSessionKey()
+{
+    sessionKey= (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
+    sessionKey.setKey(sharedSecret, (short) 0);
+}
+
 
 }

@@ -5,7 +5,7 @@ import cz.muni.fi.pv204.javacard.jcmathlib.*;
 import javacard.security.*;
 
 
-public class JPakeECParam extends Applet {
+public class JPakeECParam {
     public final byte[] p;
     public final byte[] a;
     public final byte[] b;
@@ -47,10 +47,11 @@ public class JPakeECParam extends Applet {
         ECPoint point1 = new ECPoint(curve, ecc.ech);
         ECPoint point2 = new ECPoint(curve, ecc.ech);
 
+
     }
 
 
-    void addPoints(byte[]a, byte[]b)
+    byte[] addPoints(byte[]a, byte[]b)
     {
         byte[]temp = new byte[200];
         // set point values
@@ -61,9 +62,10 @@ public class JPakeECParam extends Applet {
         point1.getW(temp,(short)0);
         System.out.println(temp);
         //to do, result processing
+        return temp;
 
     }
-    void mulPoints(byte[]a,byte[]scalar)
+    byte[] mulPoints(byte[]a,byte[]scalar)
     {
         byte[]temp = new byte[200];
         // Multiply point by large scalar
@@ -73,28 +75,11 @@ public class JPakeECParam extends Applet {
         point1.getW(temp,(short)0);
         System.out.println(temp);
         //to do, result processing
+        return temp;
     }
 
-    @Override
-    public void process(APDU apdu) throws ISOException {
-        byte[] buffer = apdu.getBuffer();
-        switch(buffer[ISO7816.OFFSET_INS])
-        {
-            case (byte) INS_ADD:
-                addPoints(pt1,pt2);
-                break;
-            case (byte) INS_MUL:
-                mulPoints(pt1,scalar);
-                break;
-            case (byte) INS_GEN_SS:
-                genSecret(apdu);
-                break;
-            default :
-                ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
-                break;
-        }
-    }
-public void genSecret(APDU apdu)
+
+public AESKey genSecret(APDU apdu)
 {
     // get host publice key, gen shared secret and send card public key to host
     byte[] buffer= apdu.getBuffer();
@@ -110,12 +95,10 @@ public void genSecret(APDU apdu)
     len = ((ECPublicKey)kpCard.getPublic()).getW(temp,(short)0);
     Util.arrayCopy(temp, (short)0,buffer, ISO7816.OFFSET_CDATA,(short)0);
     apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA,(short)len);
-    getSessionKey();
-}
-public void getSessionKey()
-{
     sessionKey= (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
     sessionKey.setKey(sharedSecret, (short) 0);
+    return sessionKey;
+
 }
 
 

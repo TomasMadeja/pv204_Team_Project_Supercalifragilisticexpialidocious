@@ -19,6 +19,8 @@ import org.bouncycastle.crypto.CryptoException;
 import org.bouncycastle.crypto.CryptoServicesRegistrar;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.digests.SHA256Digest;
+import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.math.ec.ECCurve;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.math.ec.ECPoint;
@@ -100,7 +102,7 @@ public class Participant
      * and the field is set to null.
      * </p>
      */
-    private char[] password;
+    private char[] password = {'1', '2', '3', '4'};
 
     /**
      * Digest to use during calculations.
@@ -110,11 +112,15 @@ public class Participant
     /**
      * Source of secure random data.
      */
+    
     private final SecureRandom random;
-
-    private final ECCurve.Fp ecCurve;
-    private final BigInteger q;
-    private final ECPoint G;
+    
+    private ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("prime256v1");
+    private ECCurve.Fp ecCurve = (ECCurve.Fp)ecSpec.getCurve();
+    private BigInteger q = ecCurve.getQ();
+    private BigInteger coFactor = ecSpec.getH(); // Not using the symbol "h" here to avoid confusion as h will be used later in SchnorrZKP. 
+    private BigInteger n = ecSpec.getN();
+    private ECPoint G = ecSpec.getG();
 
     /**
      * The participantId of the other participant in this exchange.
@@ -178,7 +184,7 @@ public class Participant
         this(
             participantId,
             password,
-            JPAKEPrimeOrderGroups.NIST_3072);  //TODO vybrat krivku
+            ECNamedCurveTable.getParameterSpec("prime256v1"));  //TODO vybrat krivku
     }
 
 
@@ -201,12 +207,12 @@ public class Participant
     public Participant(
         String participantId,
         char[] password,
-        ECGroup group)
+        ECParameterSpec ecSpec)
     {
         this(
             participantId,
             password,
-            group,
+            ecSpec,
             new SHA256Digest(),
             CryptoServicesRegistrar.getSecureRandom());
     }
@@ -222,6 +228,7 @@ public class Participant
      * @param password      shared secret.
      *                      A defensive copy of this array is made (and cleared once {@link #calculateKeyingMaterial()} is called).
      *                      Caller should clear the input password as soon as possible.
+     * @param ecSpec
      * @param group         prime order group.
      *                      See {@link JPAKEPrimeOrderGroups} for standard groups
      * @param digest        digest to use during zero knowledge proofs and key confirmation (SHA-256 or stronger preferred)
@@ -232,13 +239,13 @@ public class Participant
     public Participant(
         String participantId,
         char[] password,
-        ECGroup group,
+        ECParameterSpec ecSpec,
         Digest digest,
         SecureRandom random)
     {
         Util.validateNotNull(participantId, "participantId");
         Util.validateNotNull(password, "password");
-        Util.validateNotNull(group, "p");
+        Util.validateNotNull(ecSpec, "E");
         Util.validateNotNull(digest, "digest");
         Util.validateNotNull(random, "random");
         if (password.length == 0)
@@ -262,9 +269,9 @@ public class Participant
          */
         this.password = Arrays.copyOf(password, password.length);
 
-        this.ecCurve = group.Fp;  //TODO group.getP(); come up with a compatible solution with the guys
-        this.q = group.getQ();
-        this.G = group.getG();
+        this.ecCurve = (ECCurve.Fp)ecSpec.getCurve();  //TODO group.getP(); come up with a compatible solution with the guys
+        this.q = ecCurve.getQ();
+        this.G = ecSpec.getG();
 
         this.digest = digest;
         this.random = random;
@@ -301,7 +308,7 @@ public class Participant
         SchnorrZKP knowledgeProofForX1 = new SchnorrZKP();
         knowledgeProofForX1.generateZKP(G, n, x1, Gx1, participantId);  //TODO n
         SchnorrZKP knowledgeProofForX2 = new SchnorrZKP();
-        knowledgeProofForX2 = knowledgeProofForX2.generateZKP(G, n, x2, Gx2, participantId);
+        knowledgeProofForX2.generateZKP(G, n, x2, Gx2, participantId);
 
         this.state = STATE_ROUND_1_CREATED;
 
@@ -334,8 +341,8 @@ public class Participant
 
         Util.validateParticipantIdsDiffer(participantId, round1PayloadReceived.getParticipantId());
         Util.validateGx4(Gx4);
-        knowledgeProofForX3.verifyZKP(ecCurve, G, Gx3, q, round1PayloadReceived.getParticipantId()); //TODO
-        knowledgeProofForX4.verifyZKP(ecCurve, G, Gx4, q, round1PayloadReceived.getParticipantId()); //TODO
+        knowledgeProofForX3.verifyZKP(ecSpec, G, Gx3, q, round1PayloadReceived.getParticipantId()); //TODO
+        knowledgeProofForX4.verifyZKP(ecSpec, G, Gx4, q, round1PayloadReceived.getParticipantId()); //TODO
 //verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, BigInteger q, String userID)
         this.state = STATE_ROUND_1_VALIDATED;
     }

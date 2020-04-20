@@ -8,6 +8,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.util.Enumeration;
 
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.spec.ECParameterSpec;
@@ -22,7 +23,6 @@ import org.bouncycastle.math.ec.ECPoint;
 public class Host {
     private String enteredPIN = "1234";
     private String TerminalID = "Terminal";
-    
     
     public String createRound1PayloadToSend()
     {

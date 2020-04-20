@@ -12,7 +12,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class SecureChannel {
 
-    public static final short challengeLength = 6;
+    public static final short challengeLength = 32; // sha 256 - 128 for AES IV
 
     public static final byte ROUND_1 = 0x01;
     public static final byte ROUND_3 = 0x02;
@@ -40,7 +40,7 @@ public class SecureChannel {
     private byte[] participantIDA;
     private byte[] participantIDB;
     private byte[] keyingMaterial;
-    private byte[] challange;
+    private byte[] challenge;
 
     private SecureChannel() {
 //        throw new NotImplementedException();
@@ -98,6 +98,10 @@ public class SecureChannel {
                 break;
             case ROUND_HELLO:
                 if (state[0] != command) throw new NotImplementedException(); // TODO
+                inLen = unwrap(
+                        inBuffer, inOffset, inLen,
+                        inBuffer, inOffset, inLen
+                );
                 establishmentHello(
                         inBuffer, inOffset, inLen,
                         outBuffer, outOffset, outLen
@@ -279,11 +283,12 @@ public class SecureChannel {
         // Validate and Build round 2
         jpake.validateRound3PayloadReceived(A, zkp1, participantIDA);
         jpake.calculateKeyingMaterial(keyingMaterial);
-        aes.generateKey(keyingMaterial);
+
+        rand.nextBytes(challenge, (short) 0, challengeLength);
+        aes.generateKey(keyingMaterial, challenge);
         // Outgoing
-        rand.nextBytes(challange, (short) 0, challengeLength);
         Util.arrayCopy(
-                challange, (short) 0,
+                challenge, (short) 0,
                 outgoing, outgoingOffset,
                 challengeLength
         );
@@ -298,13 +303,13 @@ public class SecureChannel {
         }
         // Incoming hmaced hello, outgoing hmaced hello
         for (short i = 0; i < challengeLength; i++) {
-            if ( challange[i] != (byte) (challange[i] ^ incoming[incomingOffset+i]) ) {
+            if ( challenge[i] != (byte) (challenge[i] ^ incoming[incomingOffset+i]) ) {
                 throw new NotImplementedException(); // TODO throw something
             }
         }
         for (short i = 0; i < challengeLength; i++) {
             outgoing[outgoingOffset + i] =  (byte) (
-                    challange[i] ^ outgoing[outgoingOffset + challengeLength + i]
+                    challenge[i] ^ outgoing[outgoingOffset + challengeLength + i]
             );
         }
     }

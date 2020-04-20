@@ -24,7 +24,7 @@ public class SchnorrZKP {
     	private ECPoint V = null;
     	private BigInteger r = null;
     			
-    	private SchnorrZKP () {
+    	public SchnorrZKP () {
     		// constructor
     	}
     	

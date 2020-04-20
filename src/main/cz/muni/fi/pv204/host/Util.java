@@ -268,8 +268,6 @@ public class Util
      * </pre>
      */
     public static ECPoint calculateKeyingMaterial(
-        BigInteger p,
-        BigInteger q,
         ECPoint Gx4,
         BigInteger x2,
         BigInteger s,

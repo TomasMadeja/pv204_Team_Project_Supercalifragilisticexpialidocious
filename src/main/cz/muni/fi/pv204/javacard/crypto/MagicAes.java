@@ -1,10 +1,8 @@
 package cz.muni.fi.pv204.javacard.crypto;
 
+import javacard.framework.ISOException;
 import javacard.framework.Util;
-import javacard.security.AESKey;
-import javacard.security.Key;
-import javacard.security.KeyBuilder;
-import javacard.security.MessageDigest;
+import javacard.security.*;
 import javacardx.crypto.Cipher;
 
 public class MagicAes {
@@ -21,8 +19,12 @@ public class MagicAes {
                 KeyBuilder.LENGTH_AES_256,
                 false
         );
-        aes = Cipher.getInstance(Cipher.ALG_AES_CBC_PKCS5, false);
-
+        try {
+            aes = Cipher.getInstance(Cipher.ALG_AES_BLOCK_128_CBC_NOPAD, false);
+        }
+        catch (CryptoException e) {
+            ISOException.throwIt(CryptoException.NO_SUCH_ALGORITHM);
+        }
         sha = MessageDigest.getInstance(MessageDigest.ALG_SHA_256, false);
     }
 
@@ -37,16 +39,6 @@ public class MagicAes {
         );
 
         ((AESKey) key).setKey(out, (short) 0);
-        aes.init(
-                key,
-                Cipher.MODE_ENCRYPT,
-                iv, (short) 0, (short) 16
-        );
-        aes.init(
-                key,
-                Cipher.MODE_DECRYPT,
-                iv, (short) 0, (short) 16
-        );
     }
 
     public short encrypt(
@@ -92,6 +84,13 @@ public class MagicAes {
         return aes.doFinal(
                 inBuffer, inOffset, inLen,
                 outBuffer, outOffset
+        );
+    }
+
+    public void nextIV() {
+        sha.doFinal(
+                iv, (short) 0, (short) iv.length,
+                iv, (short) 0
         );
     }
 

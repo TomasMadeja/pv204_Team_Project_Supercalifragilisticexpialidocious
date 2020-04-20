@@ -42,33 +42,13 @@ public class SCApplet extends Applet {
         byte[] buffer = apdu.getBuffer();
         short length = apdu.setIncomingAndReceive();
 
-        byte media = (byte)(APDU.getProtocol() & APDU.PROTOCOL_MEDIA_MASK);
+        sc.processIncoming(
+                buffer[ISO7816.OFFSET_INS],
+                buffer, ISO7816.OFFSET_CDATA, length,
+                buffer, ISO7816.OFFSET_CDATA, length
+                );
 
-        boolean contactless = (	media == APDU.PROTOCOL_MEDIA_CONTACTLESS_TYPE_A ||
-                media == APDU.PROTOCOL_MEDIA_CONTACTLESS_TYPE_B);
 
-        boolean isSecureChannel = true;
-
-        //
-        // Process any outstanding chain requests
-        // NOTES:
-        // - If there is an outstanding chain request to process, this method will throw an ISOException
-        //	 (including SW_NO_ERROR) and no further processing will occur.
-        // - It is important that this command is handled before any GP SCP authentication is called to prevent a
-        //	 downgrade attack where the attacker waits for a sensitive large-command to be executed and then
-        //	 intercepts the session and cancels the secure channel (thus removing session encryption).
-
-        // We pass the APDU here because this will send data on our behalf
-//        chainBuffer.processOutgoing(apdu);
-
-        // We pass the byte array, offset and length here because the previous call to unwrap() may have altered the length
-//        chainBuffer.processIncomingObject(buffer, apdu.getOffsetCdata(), length);
-
-        //
-        // Normal APDU processing
-        //
-
-        // Call the appropriate process method based on the INS
         switch (buffer[ISO7816.OFFSET_INS]) {
 
             case INS_HELLO:

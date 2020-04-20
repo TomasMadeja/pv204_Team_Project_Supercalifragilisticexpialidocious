@@ -62,9 +62,6 @@ public class SecureChannel {
         pin.update(newPin, offset, length);
     }
 
-    public static boolean check(byte[] inPin, short offset, byte length) {
-        return pin.check(inPin, offset, length);
-    }
 
     public boolean isEstablished() {
         return state[0] == ESTABLISHED;
@@ -301,12 +298,15 @@ public class SecureChannel {
         if (incomingLength != 2*challengeLength || outgoingLength != challengeLength) {
             throw new NotImplementedException(); // TODO throw something
         }
-        // Incoming hmaced hello, outgoing hmaced hello
+
         for (short i = 0; i < challengeLength; i++) {
-            if ( challenge[i] != (byte) (challenge[i] ^ incoming[incomingOffset+i]) ) {
+            if ( incoming[incomingOffset+challengeLength+i] != (byte) (
+                    challenge[i] ^ incoming[incomingOffset+i]
+            ) ) {
                 throw new NotImplementedException(); // TODO throw something
             }
         }
+        rand.nextBytes(outgoing, challengeLength, challengeLength);
         for (short i = 0; i < challengeLength; i++) {
             outgoing[outgoingOffset + i] =  (byte) (
                     challenge[i] ^ outgoing[outgoingOffset + challengeLength + i]

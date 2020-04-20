@@ -56,7 +56,7 @@ public class TestMagicAes {
         @Override
         public void process(APDU apdu) throws ISOException {
             byte[] buffer = apdu.getBuffer();
-            short l =apdu.setIncomingAndReceive();
+            short l = apdu.setIncomingAndReceive();
 
             switch (buffer[ISO7816.OFFSET_INS]) {
 

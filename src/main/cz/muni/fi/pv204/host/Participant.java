@@ -182,7 +182,7 @@ public class Participant
         this(
             participantId,
             password,
-            ECNamedCurveTable.getParameterSpec("prime256v1"));  //TODO vybrat krivku
+            ECNamedCurveTable.getParameterSpec("P-256"));  //TODO vybrat krivku
     }
 
 

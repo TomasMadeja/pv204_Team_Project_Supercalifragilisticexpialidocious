@@ -1,0 +1,3 @@
+[submodule "submodules/JCMathLib"]
+	path = submodules/JCMathLib
+	url = https://github.com/OpenCryptoProject/JCMathLib

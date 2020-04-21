@@ -342,10 +342,8 @@ public class Participant
 
         Util.validateParticipantIdsDiffer(participantId, round1PayloadReceived.getParticipantId());
         Util.validateGx4(Gx4);
-        if(!knowledgeProofForX3.verifyZKP(ecSpec, G, Gx3, q, round1PayloadReceived.getParticipantId()) || //TODO
-           !knowledgeProofForX4.verifyZKP(ecSpec, G, Gx4, q, round1PayloadReceived.getParticipantId()) ){
-         throw new CryptoException("Zero knowledge of the 1st pass (from Alice) carried out by Bob failed.");
-        } //TODO
+        knowledgeProofForX3.verifyZKP(ecSpec, G, Gx3, q, round1PayloadReceived.getParticipantId()); //TODO
+        knowledgeProofForX4.verifyZKP(ecSpec, G, Gx4, q, round1PayloadReceived.getParticipantId()); //TODO
 //verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, BigInteger q, String userID)
         this.state = STATE_ROUND_1_VALIDATED;
     }
@@ -370,45 +368,22 @@ public class Participant
         {
             throw new IllegalStateException("Round1 payload must be validated prior to creating Round2 payload for " + this.participantId);
         }
-        
-        
-        //from Bob's point of view
-        //Bob's this.x1 is acutally x3 etc. 
-        this.x1 = Util.generateX1(q, random);
-        this.x2 = Util.generateX2(q, random);
-
-        this.Gx1 = Util.calculateGx(ecCurve, G, x1);
-        this.Gx2 = Util.calculateGx(ecCurve, G, x2);
-        SchnorrZKP knowledgeProofForX3 = new SchnorrZKP();
-        knowledgeProofForX3.generateZKP(G, n, x1, Gx1, participantId);  //TODO n
-        SchnorrZKP knowledgeProofForX4 = new SchnorrZKP();
-        knowledgeProofForX4.generateZKP(G, n, x2, Gx2, participantId);
-        
-        //Bob's this.Gx3  is the actual Gx1 etc.
-        ECPoint GB = Util.calculateGA(ecCurve, Gx3, Gx4, Gx1);
+        ECPoint GB = Util.calculateGA(ecCurve, Gx1, Gx2, Gx);
         BigInteger s = Util.calculateS(password);
-        //Bob's  this.x2 is the actual x4 etc.
-        BigInteger x4s = Util.calculateX2s(q, x2, s);
-        ECPoint B = Util.calculateA(ecCurve, q, GB, x4s);
-        SchnorrZKP knowledgeProofForX4s = new SchnorrZKP();
-        knowledgeProofForX4s.generateZKP(GB, n, x4s, B, participantId); //TODO n
+        BigInteger x2s = Util.calculateX2s(q, x2, s);
+        ECPoint A = Util.calculateA(ecCurve, q, GA, x2s);
+        SchnorrZKP knowledgeProofForX2s = new SchnorrZKP();
+        knowledgeProofForX2s.generateZKP(GA, n, x2s, A, participantId); //TODO n
         //zkpX2s.generateZKP(GA, n, x2.multiply(s1).mod(n), A, AliceID);
         //generateZKP (ECPoint generator, BigInteger n, BigInteger x, ECPoint X, String userID)
 
         this.state = STATE_ROUND_2_CREATED;
 
-        return new Round2Payload(participantId,
-        Gx1,
-        Gx2,
-        B,
-        knowledgeProofForX3,
-        knowledgeProofForX4,
-        knowledgeProofForX4s);
+        return new Round2Payload(participantId, A, knowledgeProofForX2s);
     }
 
     /**
-     * Validates the payload received from the other participant during pass 2.
-     * This step is made by Alice.
+     * Validates the payload received from the other participant during round 2.
      * <p>
      * Note that this DOES NOT detect a non-common password.
      * The only indication of a non-common password is through derivation
@@ -433,38 +408,19 @@ public class Participant
             throw new IllegalStateException("Round1 payload must be validated prior to validating Round2 payload for " + this.participantId);
         }
         ECPoint Gb = Util.calculateGA(ecCurve, Gx3, Gx1, Gx2);
-        this.B = round2PayloadReceived.getB();
-        this.Gx3 = round2PayloadReceived.getGx3();
-        this.Gx4 = round2PayloadReceived.getGx4();
-        
-        SchnorrZKP knowledgeProofForX4s = round2PayloadReceived.getKnowledgeProofForX4s();
-        SchnorrZKP knowledgeProofForX3 = round2PayloadReceived.getKnowledgeProofForX3();
-        SchnorrZKP knowledgeProofForX4 = round2PayloadReceived.getKnowledgeProofForX4();
-        
-        //these throw exceptions
+        this.B = round2PayloadReceived.getA();
+        SchnorrZKP knowledgeProofForX4s = round2PayloadReceived.getKnowledgeProofForX2s();
+
         Util.validateParticipantIdsDiffer(participantId, round2PayloadReceived.getParticipantId());
         Util.validateParticipantIdsEqual(this.partnerParticipantId, round2PayloadReceived.getParticipantId());
         Util.validateGa(Gb);
         //Util.validateZeroKnowledgeProof(p, q, gB, b, knowledgeProofForX4s, round2PayloadReceived.getParticipantId(), digest);
-        
-        //
-        if (
-        !knowledgeProofForX4s.verifyZKP(ecSpec, Gb, G, q, participantId) ||
-        !knowledgeProofForX3.verifyZKP(ecSpec, Gx3, G, q, participantId) ||
-        !knowledgeProofForX4.verifyZKP(ecSpec, Gx4, G, q, participantId) ){
-        
-            throw new CryptoException("Zero knowledge proofs of the 2nd pass (from Bob) carried out by Alice failed");
-        }
-        
+        knowledgeProofForX4s.verifyZKP(ecSpec, Gb, G, q, participantId);  //TODO ecScpec
         this.state = STATE_ROUND_2_VALIDATED;
-        
-        
     }
 
     /**
      * Calculates and returns the key material.
-     * From the point of view od Alice
-     * 
      * A session key must be derived from this key material using a secure key derivation function (KDF).
      * The KDF used to derive the key is handled externally (i.e. not by {@link JPAKEParticipant}).
      * <p>
@@ -533,49 +489,56 @@ public class Participant
 
 
     /**
-     * Creates and returns the payload to send to the other participant during the 3rd pass.This is made by Alice<p>
+     * Creates and returns the payload to send to the other participant during round 3.
+     * <p>
      * See {@link JPAKEParticipant} for more details on round 3.
      * <p>
      * After execution, the {@link #getState() state} will be  {@link #STATE_ROUND_3_CREATED}.
      *
-     * @return The payload sent by Alice during the 3rd pass of J-PAKE.
+     * @param keyingMaterial The keying material as returned from {@link #calculateKeyingMaterial()}.
      * @throws IllegalStateException if called prior to {@link #calculateKeyingMaterial()}, or multiple times
      */
-    public Round3Payload createRound3PayloadToSend()
+    public Round3Payload createRound3PayloadToSend(BigInteger keyingMaterial)
     {
         if (this.state >= STATE_ROUND_3_CREATED)
         {
             throw new IllegalStateException("Round3 payload already created for " + this.participantId);
         }
-        //if (this.state < STATE_KEY_CALCULATED)
-        //{
-        //    throw new IllegalStateException("Keying material must be calculated prior to creating Round3 payload for " + this.participantId);
-        //}
+        if (this.state < STATE_KEY_CALCULATED)
+        {
+            throw new IllegalStateException("Keying material must be calculated prior to creating Round3 payload for " + this.participantId);
+        }
 
-        ECPoint GA = Util.calculateGA(ecCurve, Gx1, Gx3, Gx4);
-        BigInteger s = Util.calculateS(password);
-        BigInteger x2s = Util.calculateX2s(q, x2, s);
-        ECPoint A = Util.calculateA(ecCurve, q, GA, x2s);
-        SchnorrZKP knowledgeProofForX2s = new SchnorrZKP();
-        knowledgeProofForX2s.generateZKP(GA, n, x2s, B, participantId);
-        return new Round3Payload(participantId, A, knowledgeProofForX2s);
+        BigInteger macTag = Util.calculateMacTag(
+            this.participantId,
+            this.partnerParticipantId,
+            this.Gx1,
+            this.Gx2,
+            this.Gx3,
+            this.Gx4,
+            keyingMaterial,
+            this.digest);
+
+        this.state = STATE_ROUND_3_CREATED;
+
+        return new Round3Payload(participantId, macTag);
     }
 
     /**
-     * Validates the payload received from the "Alice" participant during the 3rd pass.
-     * This is carried out from bob's point of view
+     * Validates the payload received from the other participant during round 3.
      * <p>
      * See {@link JPAKEParticipant} for more details on round 3.
      * <p>
      * After execution, the {@link #getState() state} will be {@link #STATE_ROUND_3_VALIDATED}.
      *
      * @param round3PayloadReceived The round 3 payload received from the other participant.
+     * @param keyingMaterial The keying material as returned from {@link #calculateKeyingMaterial()}.
      * @throws CryptoException if validation fails.
      * @throws IllegalStateException if called prior to {@link #calculateKeyingMaterial()}, or multiple times
      */
-    public void validateRound3PayloadReceived(Round3Payload round3PayloadReceived)
+    public void validateRound3PayloadReceived(Round3Payload round3PayloadReceived, BigInteger keyingMaterial)
         throws CryptoException
-    {   //These might be redundant
+    {
         if (this.state >= STATE_ROUND_3_VALIDATED)
         {
             throw new IllegalStateException("Validation already attempted for round3 payload for" + participantId);
@@ -586,17 +549,19 @@ public class Participant
         }
         Util.validateParticipantIdsDiffer(participantId, round3PayloadReceived.getParticipantId());
         Util.validateParticipantIdsEqual(this.partnerParticipantId, round3PayloadReceived.getParticipantId());
+
+        Util.validateMacTag(
+            this.participantId,
+            this.partnerParticipantId,
+            this.Gx1,
+            this.Gx2,
+            this.Gx3,
+            this.Gx4,
+            keyingMaterial,
+            this.digest,
+            round3PayloadReceived.getMacTag());
         
         
-        ECPoint A = round3PayloadReceived.getA();
-        Util.validateGa(A); //nevím, co se tu má testovat
-        
-        ECPoint Ga = Util.calculateGA(ecCurve, Gx3, Gx1, Gx2);
-        Util.validateGa(A);
-        SchnorrZKP knowledgeProofForX2s =round3PayloadReceived.getKnowledgeProofForX2s();
-        if (knowledgeProofForX2s.verifyZKP(ecSpec, G, Ga, q, participantId)){
-            throw new CryptoException("Zero knowledge proofs of the 3nd pass (from Alice) carried out by Bob failed");
-        }
         /*
          * Clear the rest of the fields.
          */

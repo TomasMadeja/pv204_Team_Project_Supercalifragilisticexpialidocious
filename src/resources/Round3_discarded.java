@@ -34,26 +34,18 @@ public class Round3Payload
      * The id of the {@link JPAKEParticipant} who created/sent this payload.
      */
     private final String participantId;
-    
-    /**
-     * The value of A, as computed for the 3rd pass.
-     */
-    private final ECPoint A;
 
     /**
-     * The zero knowledge proof for x2 * s.
+     * The value of MacTag, as computed by round 3.
+     *
+     * @see JPAKEUtil#calculateMacTag(String, String, BigInteger, BigInteger, BigInteger, BigInteger, BigInteger, org.bouncycastle.crypto.Digest)
      */
-    private final SchnorrZKP knowledgeProofForX2s;
+    private final BigInteger macTag;
 
-    public Round3Payload(String participantId, ECPoint A, SchnorrZKP knowledgeProofForX2s)
+    public Round3Payload(String participantId, BigInteger magTag)
     {
-        Util.validateNotNull(participantId, "participantId");
-        Util.validateNotNull(A, "A");
-        Util.validateNotNull(knowledgeProofForX2s, "knowledgeProofForX2s");
-        
         this.participantId = participantId;
-        this.A = A;
-        this.knowledgeProofForX2s = knowledgeProofForX2s;
+        this.macTag = magTag;
     }
 
     public String getParticipantId()
@@ -61,14 +53,9 @@ public class Round3Payload
         return participantId;
     }
 
-    public ECPoint getA()
+    public BigInteger getMacTag()
     {
-        return A;
-    }
-    
-    public SchnorrZKP getKnowledgeProofForX2s()
-    {
-        return knowledgeProofForX2s;
+        return macTag;
     }
 
 }

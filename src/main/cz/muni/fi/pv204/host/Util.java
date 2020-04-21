@@ -96,8 +96,11 @@ public class Util
     }
     
     /**
-     * Calculate x2 * s as done in round 2.
-     * TODO make this EC
+     * Calculate x2 * s as done in round 2.TODO make this EC
+     * @param q
+     * @param x2
+     * @param s
+     * @return
      */
     public static BigInteger calculateX2s(
         BigInteger q,

@@ -36,30 +36,55 @@ public class Round2Payload
     private final String participantId;
 
     /**
-     * The value of A, as computed during round 2.
+     * The value of Gx3, as computed for the 2nd pass.
      */
-    private final ECPoint A;
+    private final ECPoint Gx3;
+    /**
+     * The value of Gx4, as computed for the 2nd pass.
+     */
+    private final ECPoint Gx4;
+    /**
+     * The value of B, as computed for the 2nd pass.
+     */
+    private final ECPoint B;
 
     /**
-     * The zero knowledge proof for x2 * s.
-     * <p>
-     * This is a two element array, containing {g^v, r} for x2 * s.
-     * </p>
+     * The zero knowledge proof for x3.
      */
-    private final SchnorrZKP knowledgeProofForX2s;
+    private final SchnorrZKP knowledgeProofForX3;
+    /**
+     * The zero knowledge proof for x4.
+     */
+    private final SchnorrZKP knowledgeProofForX4;
+    /**
+     * The zero knowledge proof for x4 * s.
+     */
+    private final SchnorrZKP knowledgeProofForX4s;
 
     public Round2Payload(
         String participantId,
-        ECPoint A,
-        SchnorrZKP knowledgeProofForX2s)
+        ECPoint Gx3,
+        ECPoint Gx4,
+        ECPoint B,
+        SchnorrZKP knowledgeProofForX3,
+        SchnorrZKP knowledgeProofForX4,
+        SchnorrZKP knowledgeProofForX4s)
     {
         Util.validateNotNull(participantId, "participantId");
-        Util.validateNotNull(A, "A");
-        Util.validateNotNull(knowledgeProofForX2s, "knowledgeProofForX2s");
+        Util.validateNotNull(Gx3, "Gx3");
+        Util.validateNotNull(Gx4, "Gx4");
+        Util.validateNotNull(B, "B");
+        Util.validateNotNull(knowledgeProofForX3, "knowledgeProofForX3");
+        Util.validateNotNull(knowledgeProofForX4, "knowledgeProofForX4");
+        Util.validateNotNull(knowledgeProofForX4s, "knowledgeProofForX4s");
 
         this.participantId = participantId;
-        this.A = A;
-        this.knowledgeProofForX2s = knowledgeProofForX2s;
+        this.B = B;
+        this.Gx3 = Gx3;
+        this.Gx4 = Gx4;
+        this.knowledgeProofForX3 = knowledgeProofForX3;
+        this.knowledgeProofForX4 = knowledgeProofForX4;
+        this.knowledgeProofForX4s = knowledgeProofForX4s;
     }
 
     public String getParticipantId()
@@ -67,14 +92,30 @@ public class Round2Payload
         return participantId;
     }
 
-    public ECPoint getA()
+    public ECPoint getB()
     {
-        return A;
+        return B;
+    }
+    public ECPoint getGx3()
+    {
+        return Gx3;
+    }
+    public ECPoint getGx4()
+    {
+        return Gx4;
     }
 
-    public SchnorrZKP getKnowledgeProofForX2s()
+    public SchnorrZKP getKnowledgeProofForX4s()
     {
-        return knowledgeProofForX2s;
+        return knowledgeProofForX4s;
+    }
+    public SchnorrZKP getKnowledgeProofForX3()
+    {
+        return knowledgeProofForX3;
+    }
+    public SchnorrZKP getKnowledgeProofForX4()
+    {
+        return knowledgeProofForX4;
     }
 
 }

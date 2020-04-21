@@ -115,12 +115,12 @@ public class Participant
     
     private final SecureRandom random;
     
-    private ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("prime256v1");
-    private ECCurve.Fp ecCurve = (ECCurve.Fp)ecSpec.getCurve();
-    private BigInteger q = ecCurve.getQ();
-    private BigInteger coFactor = ecSpec.getH(); // Not using the symbol "h" here to avoid confusion as h will be used later in SchnorrZKP. 
-    private BigInteger n = ecSpec.getN();
-    private ECPoint G = ecSpec.getG();
+    public final ECParameterSpec ecSpec;
+    public final ECCurve.Fp ecCurve;
+    private final BigInteger q;
+    private final BigInteger coFactor; // Not using the symbol "h" here to avoid confusion as h will be used later in SchnorrZKP. 
+    private final BigInteger n;
+    private final ECPoint G;
 
     /**
      * The participantId of the other participant in this exchange.
@@ -163,10 +163,8 @@ public class Participant
     private int state;
 
     /**
-     * Convenience constructor for a new {@link JPAKEParticipant} that uses
-     * the {@link JPAKEPrimeOrderGroups#NIST_3072} prime order group,
-     * a SHA-256 digest, and a default {@link SecureRandom} implementation.
-     * <p>
+     * Convenience constructor that uses the prime256v1 EC
+     *
      * After construction, the {@link #getState() state} will be  {@link #STATE_INITIALIZED}.
      *
      * @param participantId unique identifier of this participant.
@@ -189,18 +187,15 @@ public class Participant
 
 
     /**
-     * Convenience constructor for a new {@link JPAKEParticipant} that uses
-     * a SHA-256 digest and a default {@link SecureRandom} implementation.
-     * <p>
-     * After construction, the {@link #getState() state} will be  {@link #STATE_INITIALIZED}.
+     * Convenience constructor for a new PArticipant that uses
+     * a SHA-256 digest and a default SecureRandom implementation.
      *
      * @param participantId unique identifier of this participant.
      *                      The two participants in the exchange must NOT share the same id.
      * @param password      shared secret.
      *                      A defensive copy of this array is made (and cleared once {@link #calculateKeyingMaterial()} is called).
      *                      Caller should clear the input password as soon as possible.
-     * @param group         prime order group.
-     *                      See {@link JPAKEPrimeOrderGroups} for standard groups
+     * @param ecSpec
      * @throws NullPointerException if any argument is null
      * @throws IllegalArgumentException if password is empty
      */
@@ -219,7 +214,8 @@ public class Participant
 
 
     /**
-     * Construct a new {@link JPAKEParticipant}.
+     * Construct a new Participant.
+     * The most flexible constructor
      * <p>
      * After construction, the {@link #getState() state} will be  {@link #STATE_INITIALIZED}.
      *
@@ -229,8 +225,6 @@ public class Participant
      *                      A defensive copy of this array is made (and cleared once {@link #calculateKeyingMaterial()} is called).
      *                      Caller should clear the input password as soon as possible.
      * @param ecSpec
-     * @param group         prime order group.
-     *                      See {@link JPAKEPrimeOrderGroups} for standard groups
      * @param digest        digest to use during zero knowledge proofs and key confirmation (SHA-256 or stronger preferred)
      * @param random        source of secure random data for x1 and x2, and for the zero knowledge proofs
      * @throws NullPointerException if any argument is null
@@ -268,11 +262,12 @@ public class Participant
          * given as input to this constructor.
          */
         this.password = Arrays.copyOf(password, password.length);
-
+        this.ecSpec = ecSpec;
         this.ecCurve = (ECCurve.Fp)ecSpec.getCurve();  //TODO group.getP(); come up with a compatible solution with the guys
         this.q = ecCurve.getQ();
         this.G = ecSpec.getG();
-
+        this.coFactor = ecSpec.getH();
+        this.n = ecSpec.getN();
         this.digest = digest;
         this.random = random;
 
@@ -293,6 +288,7 @@ public class Participant
      * Only Alice, the one who initialize the communication should use this
      * <p>
      * After execution, the {@link #getState() state} will be  {@link #STATE_ROUND_1_CREATED}.
+     * @return Round1Payload containing a point on EC and a Schnorr ZKP of the scalar522222222222u
      */
     public Round1Payload createRound1PayloadToSend()
     {
@@ -428,10 +424,6 @@ public class Participant
         {
             throw new IllegalStateException("Validation already attempted for round2 payload for" + participantId);
         }
-        if (this.state < STATE_ROUND_1_VALIDATED)
-        {
-            throw new IllegalStateException("Round1 payload must be validated prior to validating Round2 payload for " + this.participantId);
-        }
         ECPoint Gb = Util.calculateGA(ecCurve, Gx3, Gx1, Gx2);
         this.B = round2PayloadReceived.getB();
         this.Gx3 = round2PayloadReceived.getGx3();
@@ -533,9 +525,8 @@ public class Participant
 
 
     /**
-     * Creates and returns the payload to send to the other participant during the 3rd pass.This is made by Alice<p>
-     * See {@link JPAKEParticipant} for more details on round 3.
-     * <p>
+     * Creates and returns the payload to send to the other participant during the 3rd pass.
+     * This is made by Alice
      * After execution, the {@link #getState() state} will be  {@link #STATE_ROUND_3_CREATED}.
      *
      * @return The payload sent by Alice during the 3rd pass of J-PAKE.
@@ -579,10 +570,6 @@ public class Participant
         if (this.state >= STATE_ROUND_3_VALIDATED)
         {
             throw new IllegalStateException("Validation already attempted for round3 payload for" + participantId);
-        }
-        if (this.state < STATE_KEY_CALCULATED)
-        {
-            throw new IllegalStateException("Keying material must be calculated validated prior to validating Round3 payload for " + this.participantId);
         }
         Util.validateParticipantIdsDiffer(participantId, round3PayloadReceived.getParticipantId());
         Util.validateParticipantIdsEqual(this.partnerParticipantId, round3PayloadReceived.getParticipantId());

@@ -1,7 +1,9 @@
 package cz.muni.fi.pv204.javacard.jpake;
 
+
 import javacard.framework.*;
 import cz.muni.fi.pv204.javacard.jcmathlib.*;
+import java.util.Arrays;
 import javacard.security.*;
 
 
@@ -24,7 +26,30 @@ public class JPakeECParam {
     ECCurve curve= null;
     ECPoint point1 =null;
     ECPoint point2 = null;
+    
+    public static void main(String[] args){
+        byte[] p = IntToByteArray(0x256216b3);
+        byte[] a = IntToByteArray(0x2a18f23c);
+        byte[] b = IntToByteArray(0xd7b1517);
+        byte[] G = IntToByteArray(0x16c0663d);
+        byte[] r = IntToByteArray(0x23223dd8);
+        JPakeECParam myECParam = new JPakeECParam(p, a, b, G, r);
+        byte[] myOne = IntToByteArray(1);
+        byte[] firstPoint = myECParam.mulPoints(a, myOne);
+        System.out.print("The first point is");
+        System.out.println(Arrays.toString(firstPoint));
+    }
+    public static byte[] IntToByteArray( int data ) {
 
+    byte[] result = new byte[4];
+
+    result[0] = (byte) ((data & 0xFF000000) >> 24);
+    result[1] = (byte) ((data & 0x00FF0000) >> 16);
+    result[2] = (byte) ((data & 0x0000FF00) >> 8);
+    result[3] = (byte) ((data & 0x000000FF) >> 0);
+
+    return result;
+    }
     JPakeECParam(  byte[] p,   byte[] a,     byte[] b,  byte[] G,  byte[] r )
     {
         this.p = p;

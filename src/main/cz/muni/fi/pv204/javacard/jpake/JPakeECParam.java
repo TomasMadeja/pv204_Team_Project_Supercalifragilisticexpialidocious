@@ -11,9 +11,7 @@ public class JPakeECParam {
     public final byte[] b;
     public final byte[] G;
     public final byte[] r;
-    public final byte[] pt1;
-    public final byte[] pt2;
-    public final byte[] scalar;
+
 
     //to do, change the values as per standard
     final static short INS_ADD = (short) 0x42;
@@ -27,16 +25,13 @@ public class JPakeECParam {
     ECPoint point1 =null;
     ECPoint point2 = null;
 
-    JPakeECParam(  byte[] p,   byte[] a,     byte[] b,  byte[] G,  byte[] r ,byte[] pt1,byte[]pt2,byte[]scalar)
+    JPakeECParam(  byte[] p,   byte[] a,     byte[] b,  byte[] G,  byte[] r )
     {
         this.p = p;
         this.a = a;
         this.b = b;
         this.G = G;
         this.r = r;
-        this.pt1 = pt1;
-        this.pt2 = pt2;
-        this.scalar = scalar;
 
 
         ECConfig ecc = new ECConfig((short) 256);
@@ -51,55 +46,63 @@ public class JPakeECParam {
     }
 
 
-    byte[] addPoints(byte[]a, byte[]b)
+    public byte[] addPoints(byte[]a, byte[]b)
     {
-        byte[]temp = new byte[200];
+        byte[]result = new byte[200];
         // set point values
         point1.setW(a,(short)0,(short)a.length);
         point2.setW(b,(short)0,(short)b.length);
         point1.add(point2);
 
-        point1.getW(temp,(short)0);
-        System.out.println(temp);
+        point1.getW(result,(short)0);
+        System.out.println(result);
         //to do, result processing
-        return temp;
+        return result;
 
     }
-    byte[] mulPoints(byte[]a,byte[]scalar)
+    public byte[] mulPoints(byte[]a,byte[]scalar)
     {
-        byte[]temp = new byte[200];
+        byte[]result = new byte[200];
         // Multiply point by large scalar
         point1.setW(a,(short)0,(short)a.length);
         point1.multiplication(scalar, (short) 0, (short) scalar.length);
-
-        point1.getW(temp,(short)0);
-        System.out.println(temp);
+        point1.getW(result,(short)0);
+        System.out.println(result);
         //to do, result processing
-        return temp;
+        return result;
+    }
+
+    public byte[] getGenCard(byte []P1, byte[] P2, byte[] P3, byte[]x2Scalar)
+    {
+        byte[] temp,temp2;
+        byte[] result;
+        temp= addPoints(P1,P2);
+        temp2 = addPoints(temp,P3);
+        result = mulPoints(temp2,x2Scalar);
+        return result;
+    }
+    public byte[] getSharedKey(byte[] host, byte[] P4, byte[] x2Scalar, byte[] x2 )
+    {
+        byte [] temp, temp1;
+        temp = mulPoints(P4,x2Scalar);
+        ECPoint point1 = new ECPoint(curve, ecc.ech);
+        point1.setW(temp,(short)0,(short)temp.length);
+        point1.negate();
+        byte [] temp3=null;
+        point1.getW(temp3,(short)0);
+        temp1 = addPoints(host,temp3);
+        byte[] temp4;
+        temp4 = mulPoints(temp1,x2);
+      return temp4;
+
     }
 
 
-public AESKey genSecret(APDU apdu)
-{
-    // get host publice key, gen shared secret and send card public key to host
-    byte[] buffer= apdu.getBuffer();
-    byte[] temp = new byte[200];
-    short len= apdu.setIncomingAndReceive();
-    byte[] hostData= new byte[len];
-    KeyPair kpCard= new KeyPair(KeyPair.ALG_EC_FP, KeyBuilder.LENGTH_AES_128);
-    kpCard.genKeyPair();
-    KeyAgreement kaCard =KeyAgreement.getInstance(KeyAgreement.ALG_EC_SVDP_DH,false);
-    kaCard.init(kpCard.getPrivate());
-    sharedSecret = new byte[50];
-    kaCard.generateSecret(buffer,(short) 0, (short)buffer.length, sharedSecret,(byte)0);
-    len = ((ECPublicKey)kpCard.getPublic()).getW(temp,(short)0);
-    Util.arrayCopy(temp, (short)0,buffer, ISO7816.OFFSET_CDATA,(short)0);
-    apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA,(short)len);
-    sessionKey= (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_128, false);
-    sessionKey.setKey(sharedSecret, (short) 0);
-    return sessionKey;
 
-}
+
+
+
+
 
 
 }

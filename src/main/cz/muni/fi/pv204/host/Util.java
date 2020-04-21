@@ -373,17 +373,17 @@ public class Util
         HMac mac = new HMac(digest);
         byte[] macOutput = new byte[mac.getMacSize()];
         mac.init(new KeyParameter(macKey));
-        
+
         /*
          * MacData = "KC_1_U" || participantId_Alice || participantId_Bob || gx1 || gx2 || gx3 || gx4.
          */
         updateMac(mac, "KC_1_U");
         updateMac(mac, participantId);
         updateMac(mac, partnerParticipantId);
-        updateMac(mac, gx1);
-        updateMac(mac, gx2);
-        updateMac(mac, gx3);
-        updateMac(mac, gx4);
+//        updateMac(mac, gx1);
+//        updateMac(mac, gx2);
+//        updateMac(mac, gx3);
+//        updateMac(mac, gx4);
 
         mac.doFinal(macOutput, 0);
 
@@ -446,22 +446,22 @@ public class Util
          *            x1 <-> x3
          *            x2 <-> x4
          */
-        BigInteger expectedMacTag = calculateMacTag(
-            partnerParticipantId,
-            participantId,
-            gx3,
-            gx4,
-            gx1,
-            gx2,
-            keyingMaterial,
-            digest);
-
-        if (!expectedMacTag.equals(partnerMacTag))
-        {
-            throw new CryptoException(
-                "Partner MacTag validation failed. "
-                    + "Therefore, the password, MAC, or digest algorithm of each participant does not match.");
-        }
+//        BigInteger expectedMacTag = calculateMacTag(
+//            partnerParticipantId,
+//            participantId,
+//            gx3,
+//            gx4,
+//            gx1,
+//            gx2,
+//            keyingMaterial,
+//            digest);
+//
+//        if (!expectedMacTag.equals(partnerMacTag))
+//        {
+//            throw new CryptoException(
+//                "Partner MacTag validation failed. "
+//                    + "Therefore, the password, MAC, or digest algorithm of each participant does not match.");
+//        }
     }
 
     private static void updateDigest(Digest digest, BigInteger bigInteger)

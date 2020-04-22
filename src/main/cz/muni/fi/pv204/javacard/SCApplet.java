@@ -2,12 +2,9 @@ package cz.muni.fi.pv204.javacard;
 
 import cz.muni.fi.pv204.javacard.jpake.JPakeECParam;
 
-import javacard.framework.Applet;
-import javacard.framework.APDU;
+import javacard.framework.*;
 
 // Delete me when done implementing
-import javacard.framework.ISO7816;
-import javacard.framework.Util;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class SCApplet extends Applet {
@@ -43,13 +40,15 @@ public class SCApplet extends Applet {
 
     public void process(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
-        short length = apdu.setIncomingAndReceive();
+        short length;
 
-        sc.processIncoming(
-                buffer[ISO7816.OFFSET_INS],
-                buffer, ISO7816.OFFSET_CDATA, length,
-                buffer, ISO7816.OFFSET_CDATA, length
-                );
+        try {
+            length = sc.processIncoming(
+                    apdu
+            );
+        } catch (Exception e) {
+            ISOException.throwIt(ISO7816.SW_UNKNOWN);
+        }
 
 
         switch (buffer[ISO7816.OFFSET_INS]) {

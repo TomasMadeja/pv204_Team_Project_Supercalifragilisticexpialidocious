@@ -60,7 +60,9 @@ public class JPake {
             byte[] knowdledgeProofForX4sV,
             BigInteger knowledgeProofForX4sr,
             byte[] participantId
-    ) { }
+    ) {
+        return new BigInteger[0];
+    }
 
 
     public void createRound3PayloadToSend(

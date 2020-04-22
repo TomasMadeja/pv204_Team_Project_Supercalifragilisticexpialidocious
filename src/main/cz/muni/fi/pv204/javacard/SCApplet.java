@@ -1,5 +1,7 @@
 package cz.muni.fi.pv204.javacard;
 
+import cz.muni.fi.pv204.javacard.jpake.JPakeECParam;
+
 import javacard.framework.Applet;
 import javacard.framework.APDU;
 
@@ -13,6 +15,7 @@ public class SCApplet extends Applet {
     private static final byte INS_HELLO = (byte) 0xFA;
 
     private SecureChannel sc;
+
 
     private SCApplet(byte[] bArray, short bOffset, byte bLength) {
         // offset + [PIN_LENGTH | PIN] + [MORE_DATA]
@@ -59,5 +62,8 @@ public class SCApplet extends Applet {
 
         }
     }
+
+
+
 
 }

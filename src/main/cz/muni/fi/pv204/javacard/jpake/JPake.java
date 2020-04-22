@@ -216,8 +216,8 @@ public class JPake {
     ) { 
         try {
             //X9ECParameters curve = ECNamedCurveTable.getByName("P-256");
-            ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("P-256");
-            ECCurve curve = ecSpec.getCurve();
+            //ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("P-256");
+            //ECCurve curve = ecSpec.getCurve();
             ECDomainParameters ecparams = new ECDomainParameters(ecSpec.getCurve(), ecSpec.getG(), ecSpec.getN(), ecSpec.getH(), ecSpec.getSeed());
             // check if Gx1,Gx2 are infinity
 

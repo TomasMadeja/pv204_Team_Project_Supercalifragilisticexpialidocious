@@ -20,10 +20,9 @@ import org.bouncycastle.math.ec.ECCurve;
 public class JPake {
 
 
-
     public final JPakeECParam group; // TODO set some default
     public final ECParameterSpec ecSpec;
-    public final ECCurve curve; 
+    public final ECCurve curve;
     //private BigInteger a = curve.getA().toBigInteger();
     //private BigInteger b = curve.getB().toBigInteger();
     //private BigInteger q = curve.getQ();
@@ -34,12 +33,12 @@ public class JPake {
     public final short sizeOfAB;
     public final short sizeOfZKP;
     public final short sizeOfID;
-    
+
     private char[] participantID;
     private byte[] participantID_byte;
     private JPakePassword password; //TODO getnout cosi blabla
-    
-     /**
+
+    /**
      * Alice's x1 or Bob's x3.
      */
     private BigInteger x1;
@@ -74,7 +73,7 @@ public class JPake {
     private BigInteger knowledgeProofForX2r;
     private BigInteger knowledgeProofForX3r;
     private BigInteger knowledgeProofForX4r;
-    
+
     private ECPoint knowledgeProofForX1V;
     private ECPoint knowledgeProofForX2V;
     private ECPoint knowledgeProofForX3V;
@@ -119,9 +118,9 @@ public class JPake {
         sizeOfAB = 1;
         sizeOfZKP = 1;
         sizeOfID = 1;
-        this.participantID=participantID; // add byte[] equivalents?
-        this.password=password;
-        this.ecSpec = ECNamedCurveTable.getParameterSpec("P-256");  
+        this.participantID = participantID; // add byte[] equivalents?
+        this.password = password;
+        this.ecSpec = ECNamedCurveTable.getParameterSpec("P-256");
         this.group = group;
         this.curve = ecSpec.getCurve();
         this.digest = digest;
@@ -157,32 +156,34 @@ public class JPake {
             byte[] knowdledgeProofForX4sV,
             BigInteger knowledgeProofForX4sr, //ignored
             byte[] participantId
-    ) { 
-        this.x1 = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE, 
-    			n.subtract(BigInteger.ONE), new SecureRandom());
-        this.x2 = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE, 
-    			n.subtract(BigInteger.ONE), new SecureRandom());
-        
+    ) {
+        this.x1 = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE,
+                n.subtract(BigInteger.ONE), new SecureRandom());
+        this.x2 = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE,
+                n.subtract(BigInteger.ONE), new SecureRandom());
+
         this.Gx1 = G.multiply(x1);
         this.Gx2 = G.multiply(x2);
+
+
         //TODO copy them into the input parameters
-        
-        
+
+
         return new BigInteger[0];
     }
 
-/*
-    public void createRound3PayloadToSend(
-            byte[] A,
-            byte[] knowdledgeProofForX2s,
-            byte[] participantId
-    ) {
-        this.A=A;
-        this.knowledgeProofForX2s=knowdledgeProofForX2s;
-        this.participantID_byte=participantId;
-    }
+    /*
+        public void createRound3PayloadToSend(
+                byte[] A,
+                byte[] knowdledgeProofForX2s,
+                byte[] participantId
+        ) {
+            this.A=A;
+            this.knowledgeProofForX2s=knowdledgeProofForX2s;
+            this.participantID_byte=participantId;
+        }
 
-*/
+    */
     public boolean validateRound1PayloadReceived(
             byte[] Gx1,
             byte[] Gx2,
@@ -191,7 +192,7 @@ public class JPake {
             byte[] knowledgeProofForX2V,
             BigInteger knowledgeProofForX2r,
             byte[] participantId
-    ) { 
+    ) {
         try {
             //X9ECParameters curve = ECNamedCurveTable.getByName("P-256");
             ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("P-256");
@@ -199,9 +200,9 @@ public class JPake {
             ECDomainParameters ecparams = new ECDomainParameters(ecSpec.getCurve(), ecSpec.getG(), ecSpec.getN(), ecSpec.getH(), ecSpec.getSeed());
             // check if Gx1,Gx2 are infinity
 
-            if (( JPakeECParam.byteArrayToECPoint(Gx1)).isInfinity() ||
+            if ((JPakeECParam.byteArrayToECPoint(Gx1)).isInfinity() ||
                     (JPakeECParam.byteArrayToECPoint(Gx2)).isInfinity())
-             throw new Exception("infnity point ");
+                throw new Exception("infnity point ");
 
             // check if points are valid for the given curve
             ecparams.getCurve().decodePoint((JPakeECParam.byteArrayToECPoint(Gx1)).getEncoded(false));
@@ -211,22 +212,20 @@ public class JPake {
             ECPoint V1 = JPakeECParam.byteArrayToECPoint(knowledgeProofForX1V);
             BigInteger r1 = knowledgeProofForX1r;
             ECPoint Gx1Point = JPakeECParam.byteArrayToECPoint(Gx1);
-            
+
             //BigInteger h = JPakeECParam.getSHA256(ecSpec.getG(), V, Gx1Point, Arrays.toString(participantID));
             //verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, ECPoint V, BigInteger r, BigInteger q, String userID) {	
-            if (!JPakeECParam.verifyZKP(ecSpec, ecSpec.getG(), Gx1Point, V1, r1, ecSpec.getN(), Arrays.toString(participantID)) ) {
+            if (!JPakeECParam.verifyZKP(ecSpec, ecSpec.getG(), Gx1Point, V1, r1, ecSpec.getN(), Arrays.toString(participantID))) {
                 return false;
             }
             ECPoint V2 = JPakeECParam.byteArrayToECPoint(knowledgeProofForX2V);
             BigInteger r2 = knowledgeProofForX2r;
             ECPoint Gx2Point = JPakeECParam.byteArrayToECPoint(Gx2);
-            if (!JPakeECParam.verifyZKP(ecSpec, ecSpec.getG(), Gx2Point, V2, r2, ecSpec.getN(), Arrays.toString(participantID)) ) {
+            if (!JPakeECParam.verifyZKP(ecSpec, ecSpec.getG(), Gx2Point, V2, r2, ecSpec.getN(), Arrays.toString(participantID))) {
                 return false;
             }
 
-            }
-        catch(Exception e)
-        {
+        } catch (Exception e) {
             //System.out.println("exception in JPake");
             //e.printStackTrace();
             return false;
@@ -246,20 +245,57 @@ public class JPake {
             byte[] knowledgeProofForX4s,
             byte[] participantId
     ) {
-    
-    
     }
 */
 
-    public void validateRound3PayloadReceived(
+    public boolean validateRound3PayloadReceived(
             byte[] A,
             BigInteger knowledgeProofForX2s,
             byte[] participantId
-    ) { }
+    ) {
+        try {
+            ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("P-256");
+            ECCurve curve = ecSpec.getCurve();
+            ECDomainParameters ecparams = new ECDomainParameters(ecSpec.getCurve(), ecSpec.getG(), ecSpec.getN(), ecSpec.getH(), ecSpec.getSeed());
 
 
-    public void calculateKeyingMaterial(
-            byte[] keyingMaterial
-    ) { }
+            BigInteger r1 = knowledgeProofForX2s;
+            ECPoint ptA = JPakeECParam.byteArrayToECPoint(A);
+
+            //check if A is infinity
+            if (ptA.isInfinity())
+                throw new Exception("infinity");
+
+            //check if A is valid point on curve
+            ecparams.getCurve().decodePoint((JPakeECParam.byteArrayToECPoint(A)).getEncoded(false));
+
+            // verify if (g1*g3*g4)^(x2*s) = A
+
+            if (A.equals(JPakeECParam.addPoints(JPakeECParam.addPoints(Gx1, Gx2), Gx3).multiply(r1.mod(n))))
+                return true;
+            else
+                return false;
+
+
+            //return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+        public ECPoint calculateKeyingMaterial()
+        {
+            //Kb = (A - (G2 x [x4*s])) x [x4], retunr byte[]
+        BigInteger s= BigInteger.valueOf(0);
+        // to do update the value of S
+
+
+           ECPoint result = JPakeECParam.mulPoints(JPakeECParam.addPoints(B,(JPakeECParam.mulPoints(Gx4,(x2.multiply(s))).negate())),x2);
+            return result;
+
+        }
+
+
+
+
 
 }

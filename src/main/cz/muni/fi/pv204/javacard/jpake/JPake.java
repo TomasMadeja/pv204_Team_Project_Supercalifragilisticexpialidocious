@@ -42,23 +42,23 @@ public class JPake {
            byte[] Gx1,
            byte[] Gx2,
            byte[] knowledgeProofForX1V,
-           BigInteger knowledgeProofForX1r,
+           byte[] knowledgeProofForX1r,
            byte[] knowdledgeProofForX2sV,
-           BigInteger knowledgeProofForX2r,
+           byte[] knowledgeProofForX2r,
            byte[] participantId
     ) { }
 
 
-    public void createRound2PayloadToSend(
+    public BigInteger[] createRound2PayloadToSend(
             byte[] Gx3,
             byte[] Gx4,
             byte[] B,
             byte[] knowledgeProofForX3V,
-            BigInteger knowledgeProofForX3r,
+            byte[] knowledgeProofForX3r,
             byte[] knowdledgeProofForX4V,
-            BigInteger knowledgeProofForX4r,
+            byte[] knowledgeProofForX4r,
             byte[] knowdledgeProofForX4sV,
-            BigInteger knowledgeProofForX4sr,
+            byte[] knowledgeProofForX4sr,
             byte[] participantId
     ) { }
 
@@ -66,7 +66,7 @@ public class JPake {
     public void createRound3PayloadToSend(
             byte[] A,
             byte[] knowdledgeProofForX2sV,
-            BigInteger knowledgeProofForX2sr,
+            byte[] knowledgeProofForX2sr,
             byte[] participantId
     ) { }
 

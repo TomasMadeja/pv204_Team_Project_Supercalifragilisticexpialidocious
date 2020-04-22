@@ -99,7 +99,7 @@ public class SecureChannel {
             byte[] outBuffer,
             short outOffset,
             short outLen
-            ) {
+            ) throws Exception {
 
         switch (command) {
             case ROUND_1_ID:
@@ -244,19 +244,41 @@ public class SecureChannel {
         );
     }
 
+    private short encodeIDB(
+            byte[] outgoing, short outgoingOffset, short outgoingLength
+    ) {
+        Util.arrayCopy(
+                participantIDB, (short) 0,
+                outgoing, outgoingOffset,
+                SIZE_ID
+        );
+        return SIZE_ID;
+    }
+
     private void parseECPoint(
-            byte[] incoming, short incomingOffset, short incomingLength, byte[] outgoing
+            byte[] incoming, short incomingOffset, short incomingLength, byte[] dst
     ) {
         Util.arrayCopy(
                 incoming, incomingOffset,
-                outgoing, (short) 0,
+                dst, (short) 0,
                 SIZE_EC_POINT
         );
     }
 
+    private short encodeECPoint(
+            byte[] outgoing, short outgoingOffset, short outgoingLength, byte[] src
+    ) {
+        Util.arrayCopy(
+                src, (short) 0,
+                outgoing, outgoingOffset,
+                SIZE_EC_POINT
+        );
+        return SIZE_EC_POINT;
+    }
+
     private void parseZKP(
             byte[] incoming, short incomingOffset, short incomingLength, short t
-    ) {
+    ) throws Exception {
         byte[] target;
         switch (t) {
             case 1:
@@ -268,11 +290,12 @@ public class SecureChannel {
             case 3:
                 target = zkp3_v;
                 break;
-
+            default:
+                throw new Exception();
         }
         Util.arrayCopy(
                 incoming, incomingOffset,
-                zkp1_v, (short) 0,
+                target, (short) 0,
                 SIZE_EC_POINT
         );
         byte[] tmp = new byte[incomingLength-SIZE_EC_POINT];
@@ -294,6 +317,58 @@ public class SecureChannel {
                 break;
 
         }
+    }
+
+    private short encodeZKP(
+            byte[] outgoing, short outgoingOffset, short outgoingLength,
+            byte[] zkp_V, BigInteger zkp_r
+    ) {
+        Util.arrayCopy(
+                zkp_V, (short) 0,
+                outgoing, outgoingOffset,
+                SIZE_EC_POINT
+        );
+        byte[] tmp = zkp_r.toByteArray();
+        short l = (short) tmp.length;
+        if (l > outgoingLength - SIZE_EC_POINT) {
+            ISOException.throwIt(ISO7816.SW_UNKNOWN);
+        }
+        Util.arrayCopy(
+                tmp, (short) 0,
+                outgoing, (short)(outgoingOffset+SIZE_EC_POINT),
+                l
+        );
+        return (short) (SIZE_EC_POINT+l);
+    }
+
+    private void validateRound1() {
+        jpake.validateRound1PayloadReceived(
+                Gx1, Gx2,
+                zkp1_v, zkp1_r,
+                zkp2_v, zkp2_r,
+                participantIDA
+        );
+    }
+
+    private void generateRound2() {
+        zkp1_r = new BigInteger("0");
+        zkp2_r = new BigInteger("0");
+        zkp3_r = new BigInteger("0");
+        jpake.createRound2PayloadToSend(
+                Gx3, Gx4, B,
+                zkp1_v, zkp1_r,
+                zkp2_v, zkp2_r,
+                zkp3_v, zkp3_r,
+                participantIDB
+        );
+    }
+
+    private void validateRound3() {
+        jpake.validateRound3PayloadReceived(
+                B,
+                zkp1_v, zkp1_r,
+                participantIDA
+        );
     }
 
 

@@ -14,10 +14,22 @@ public class SecureChannel {
 
     public static final short challengeLength = 32; // sha 256 - 128 for AES IV
 
-    public static final byte ROUND_1 = 0x01;
-    public static final byte ROUND_3 = 0x02;
-    public static final byte ROUND_HELLO = 0x03;
-    public static final byte ESTABLISHED = 0x04;
+    public static final byte ROUND_1_ID = 0x11;
+    public static final byte ROUND_1_GX = 0x12;
+    public static final byte ROUND_1_ZKP1 = 0x13;
+    public static final byte ROUND_1_ZKP2 = 0x14;
+
+    public static final byte ROUND_2_GX = 0x21;
+    public static final byte ROUND_2_B = 0x22;
+    public static final byte ROUND_2_ZKP1 = 0x23;
+    public static final byte ROUND_2_ZKP2 = 0x24;
+    public static final byte ROUND_2_ZKP3 = 0x25;
+
+    public static final byte ROUND_3_A = 0x31;
+    public static final byte ROUND_3_ZKP1 = 0x32;
+
+    public static final byte ROUND_HELLO = 0x41;
+    public static final byte ESTABLISHED = 0x42;
 
     private static SecureChannel sc = null;
     private static JPakePassword pin = null;
@@ -78,21 +90,65 @@ public class SecureChannel {
             ) {
 
         switch (command) {
-            case ROUND_1:
-                establishmentRound2(
-                        inBuffer, inOffset, inLen,
-                        outBuffer, outOffset, outLen
-                );
-                state[0] = ROUND_3;
+            case ROUND_1_ID:
+                // TODO do something
+                state[0] = ROUND_1_GX;
                 break;
-            case ROUND_3:
-                if (state[0] != command) throw new NotImplementedException(); // TODO
-                establishmentChallenge(
-                        inBuffer, inOffset, inLen,
-                        outBuffer, outOffset, outLen
-                );
+            case ROUND_1_GX:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_1_ZKP1;
+                break;
+            case ROUND_1_ZKP1:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_1_ZKP2;
+                break;
+            case ROUND_1_ZKP2:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_2_GX; // Response should contain participant ID
+                break;
+            case ROUND_2_GX:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_2_B;
+                break;
+            case ROUND_2_B:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_2_ZKP1;
+            case ROUND_2_ZKP1:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_2_ZKP2;
+                break;
+            case ROUND_2_ZKP2:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_2_ZKP3;
+            case ROUND_2_ZKP3:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_3_A;
+            case ROUND_3_A:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_3_ZKP1;
+            case ROUND_3_ZKP1:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
                 state[0] = ROUND_HELLO;
-                break;
             case ROUND_HELLO:
                 if (state[0] != command) throw new NotImplementedException(); // TODO
                 inLen = unwrap(

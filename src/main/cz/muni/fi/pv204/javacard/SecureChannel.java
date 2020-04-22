@@ -84,7 +84,7 @@ public class SecureChannel {
             throw new RuntimeException("Wrong PIN size");
         }
         if (pin == null) {
-            pin = new JPakePassword((byte) (PIN_TRIES +1), (byte) PIN_SIZE);
+            pin = new JPakePassword((byte) PIN_TRIES , (byte) PIN_SIZE);
         }
         pin.update(newPin, offset, length);
     }
@@ -98,7 +98,6 @@ public class SecureChannel {
             APDU apdu
             ) throws Exception {
 
-        byte[] buffer = apdu.getBuffer();
         byte[] inBuffer = apdu.getBuffer();
         short inOffset = inBuffer[ISO7816.OFFSET_CDATA];
         short inLen = apdu.getIncomingLength();
@@ -106,10 +105,11 @@ public class SecureChannel {
         short outOffset = inOffset;
         short outLen = 256;
 
-
+        short size;
         byte command = inBuffer[ISO7816.OFFSET_INS];
         switch (command) {
             case ROUND_1_ID:
+                checkPinSTate();
                 checkLength(inLen, SIZE_ID, SIZE_ID);
                 pin.decrement();
                 state[0] = ROUND_1_GX;
@@ -138,39 +138,41 @@ public class SecureChannel {
                 parseZKP(inBuffer, inOffset, inLen, (short) 2);
                 validateRound1();
                 generateRound2();
-                encodeIDB(outBuffer, outOffset, outLen);
+                size = encodeIDB(outBuffer, outOffset, outLen);
                 state[0] = ROUND_2_GX; // Response should contain participant ID
-                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                sendSuccess(apdu, outOffset, size);
                 break;
             case ROUND_2_GX:
                 checkState(command);
-                encodeECPoint(outBuffer, outOffset, outLen, Gx3);
-                encodeECPoint(outBuffer, (short)(outOffset+SIZE_EC_POINT), outLen, Gx4);
+                size = encodeECPoint(outBuffer, outOffset, outLen, Gx3);
+                size += encodeECPoint(outBuffer, (short)(outOffset+SIZE_EC_POINT), outLen, Gx4);
                 state[0] = ROUND_2_B;
-                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                sendSuccess(apdu, outOffset, size);
                 break;
             case ROUND_2_B:
                 checkState(command);
-                encodeECPoint(outBuffer, outOffset, outLen, B);
+                size = encodeECPoint(outBuffer, outOffset, outLen, B);
                 state[0] = ROUND_2_ZKP1;
-                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                sendSuccess(apdu, outOffset, size);
                 break;
             case ROUND_2_ZKP1:
                 checkState(command);
-                encodeZKP(outBuffer, outOffset, outLen, zkp1_v, zkp1_r);
+                size = encodeZKP(outBuffer, outOffset, outLen, zkp1_v, zkp1_r);
                 state[0] = ROUND_2_ZKP2;
-                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                sendSuccess(apdu, outOffset, size);
                 break;
             case ROUND_2_ZKP2:
                 checkState(command);
-                encodeZKP(outBuffer, outOffset, outLen, zkp2_v, zkp2_r);
+                size = encodeZKP(outBuffer, outOffset, outLen, zkp2_v, zkp2_r);
                 state[0] = ROUND_2_ZKP3;
+                sendSuccess(apdu, outOffset, size);
                 ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_2_ZKP3:
                 checkState(command);
-                encodeZKP(outBuffer, outOffset, outLen, zkp3_v, zkp3_r);
+                size = encodeZKP(outBuffer, outOffset, outLen, zkp3_v, zkp3_r);
                 state[0] = ROUND_3_A;
+                sendSuccess(apdu, outOffset, size);
                 ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_3_A:
@@ -188,7 +190,7 @@ public class SecureChannel {
                 validateRound3();
                 prepareForHello(outBuffer, outOffset, outLen);
                 state[0] = ROUND_HELLO;
-                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                sendSuccess(apdu, outOffset, (short) (challengeLength));
                 break;
             case ROUND_HELLO:
                 if (state[0] != command) throw new NotImplementedException(); // TODO
@@ -201,8 +203,9 @@ public class SecureChannel {
                         outBuffer, outOffset, outLen
                 );
                 state[0] = ESTABLISHED;
+                wrap(outBuffer, outOffset, (short)(2*challengeLength), outBuffer, outOffset, outLen);
                 pin.correct();
-                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                sendSuccess(apdu, outOffset, (short) (2*challengeLength));
                 break;
             default:
                 if (state[0] != ESTABLISHED) throw new NotImplementedException(); // TODO
@@ -244,6 +247,11 @@ public class SecureChannel {
                 inBuffer, inOffset, inLen,
                 outBuffer, outOffset, outLen
         );
+    }
+
+    private void sendSuccess(APDU apdu, short offset, short len) {
+        apdu.setOutgoingAndSend(offset, len);
+        ISOException.throwIt(ISO7816.SW_NO_ERROR);
     }
 
     private void parseIDA(
@@ -427,6 +435,12 @@ public class SecureChannel {
         }
     }
 
+    private void checkPinSTate() {
+        if (pin.getTriesRemaining() == 0x00) {
+            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+        }
+    }
+
     private void checkLength(short inLen, short lower, short upper) {
         if (lower > inLen || inLen > upper) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
@@ -434,6 +448,7 @@ public class SecureChannel {
     }
 
     private void checkState(byte expected) {
+        checkPinSTate();
         if (state[0] != expected) {
             ISOException.throwIt(ISO7816.SW_COMMAND_NOT_ALLOWED);
         }

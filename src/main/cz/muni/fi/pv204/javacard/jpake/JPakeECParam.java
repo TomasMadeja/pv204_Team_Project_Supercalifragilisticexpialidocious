@@ -70,7 +70,7 @@ public static ECPoint byteArrayToECPoint(byte[] input)
     return result;
 }
 
-public BigInteger getSHA256(ECPoint generator, ECPoint V, ECPoint X, String userID) {
+public static BigInteger getSHA256(ECPoint generator, ECPoint V, ECPoint X, String userID) {
 
     	MessageDigest sha256 = null;
         sha256 = MessageDigest.getInstance(MessageDigest.ALG_SHA_256,false);

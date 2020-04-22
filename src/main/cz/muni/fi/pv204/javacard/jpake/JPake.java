@@ -10,6 +10,7 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.math.ec.ECCurve;
@@ -157,7 +158,8 @@ public class JPake {
             //beginning of checking the proof
             ECPoint V = JPakeECParam.byteArrayToECPoint(knowledgeProofForX1V);
             BigInteger r = knowledgeProofForX1r;
-            BigInteger h = getSHA256(generator, V, Gx1, userID);
+            ECPoint Gx1Point = JPakeECParam.byteArrayToECPoint(Gx1);
+            BigInteger h = JPakeECParam.getSHA256(curve.getG(), V, Gx1Point, Arrays.toString(participantID));
 
 
             }

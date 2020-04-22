@@ -1,9 +1,14 @@
 package cz.muni.fi.pv204.host;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.ShortBufferException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.DigestException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 
 public class MagicAes {
@@ -18,7 +23,7 @@ public class MagicAes {
         aes = Cipher.getInstance("AES/CBC/NoPadding");
     }
 
-    public void generateKey(byte[] data, byte[] iv) throws Exception {
+    public void generateKey(byte[] data, byte[] iv) {
         System.arraycopy(iv, 0, this.iv, 0, iv.length);
         sha.reset();
         key = new SecretKeySpec(sha.digest(data), 0, 32, "AES");
@@ -31,7 +36,7 @@ public class MagicAes {
             byte[] outBuffer,
             short outOffset,
             short outLen
-    ) throws Exception {
+    ) throws BadPaddingException, ShortBufferException, IllegalBlockSizeException, InvalidAlgorithmParameterException, InvalidKeyException, DigestException {
         digest(
                 iv, 0, iv.length,
                 iv, 0, iv.length
@@ -54,7 +59,7 @@ public class MagicAes {
             byte[] outBuffer,
             short outOffset,
             short outLen
-    ) throws Exception {
+    ) throws DigestException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, ShortBufferException, IllegalBlockSizeException {
         digest(
                 iv, 0, iv.length,
                 iv, 0, iv.length

@@ -4,7 +4,7 @@ import cz.muni.fi.pv204.host.JCardSymInterface;
 import cz.muni.fi.pv204.host.cardTools.Util;
 import cz.muni.fi.pv204.javacard.crypto.MagicAes;
 import javacard.framework.*;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 import javax.crypto.spec.PBEKeySpec;

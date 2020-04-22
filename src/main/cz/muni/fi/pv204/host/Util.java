@@ -105,7 +105,7 @@ public class Util
         BigInteger x2,
         BigInteger s)
     {
-        return x2.multiply(s).mod(q);
+        return x2.multiply(s);
     }
     
        /**

@@ -38,6 +38,27 @@ public class SecureChannel {
     public static final byte SIZE_ECPOINT_BYTE = 0x41;
     public static final int SIZE_ID = 10;
 
+    public static final short SW_NO_ERROR = (short) 0x9000;
+
+    public static class ErrorResponseException extends Exception {
+        private short errorCode;
+
+        public ErrorResponseException(short errorCode) {
+            this.errorCode = errorCode;
+        }
+
+        public short getErrorCode() {
+            return errorCode;
+        }
+    }
+
+    public static class ResponseFormatException extends Exception {
+
+        public ResponseFormatException() {
+            super();
+        }
+
+    }
 
     private JCardSymInterface channel;
     private MagicAes aes;
@@ -74,7 +95,7 @@ public class SecureChannel {
     public void wrap() { }
     public void unwrap() {}
 
-    private ResponseAPDU establishmentRound1() throws CardException {
+    private ResponseAPDU establishmentRound1() throws CardException, ErrorResponseException {
 
         Round1Payload round1 = participant.createRound1PayloadToSend();
         byte[] Gx1 = round1.getGx1().getEncoded(false);
@@ -143,7 +164,7 @@ public class SecureChannel {
 
     private void validationRound2(
             ResponseAPDU response
-    ) throws CardException, CryptoException {
+    ) throws CardException, CryptoException, ErrorResponseException, ResponseFormatException {
         short sizeOfGx = SIZE_ECPOINT;
 
         byte[] Gx3 = new byte[sizeOfGx];
@@ -157,6 +178,8 @@ public class SecureChannel {
         byte[] incoming;
         short offset;
 
+        checkResponseLength(response, SIZE_ID, SIZE_ID);
+
         incoming = response.getData();
         offset = 0;
         System.arraycopy(
@@ -169,6 +192,7 @@ public class SecureChannel {
         );
         checkResponseAccept(response);
 
+        checkResponseLength(response, 2*SIZE_ECPOINT, 2*SIZE_ECPOINT);
         incoming = response.getData();
         offset = 0;
         System.arraycopy(
@@ -187,6 +211,7 @@ public class SecureChannel {
         );
         checkResponseAccept(response);
 
+        checkResponseLength(response, SIZE_ECPOINT, SIZE_ECPOINT);
         incoming = response.getData();
         offset = 0; // B
         System.arraycopy(
@@ -199,6 +224,7 @@ public class SecureChannel {
         );
         checkResponseAccept(response);
 
+        checkResponseLength(response, SIZE_ECPOINT+1, 255);
         incoming = response.getData();
         offset = 0; // ZKP X3
         zkp1 = split(incoming, offset, incoming.length);
@@ -207,6 +233,7 @@ public class SecureChannel {
         );
         checkResponseAccept(response);
 
+        checkResponseLength(response, SIZE_ECPOINT+1, 255);
         incoming = response.getData();
         offset = 0; // ZKP X4
         zkp2 = split(incoming, offset, incoming.length);
@@ -215,6 +242,7 @@ public class SecureChannel {
         );
         checkResponseAccept(response);
 
+        checkResponseLength(response, SIZE_ECPOINT+1, 255);
         incoming = response.getData();
         offset = 0; // ZKP X4s
         zkp3 = split(incoming, offset, incoming.length);
@@ -233,7 +261,7 @@ public class SecureChannel {
         );
     }
 
-    private ResponseAPDU establishmentRound3() throws CardException {
+    private ResponseAPDU establishmentRound3() throws CardException, ErrorResponseException {
         short sizeOfGx = SIZE_ECPOINT;
         byte[] A = new byte[sizeOfGx];
         byte[] zkp1;
@@ -277,6 +305,7 @@ public class SecureChannel {
             throw new Exception(); // TODO add specific range
         }
 
+        checkResponseLength(response, CHALLANGE_LENGTH, CHALLANGE_LENGTH);
         // TODO add call for keying material
         byte[] keyingMaterial = participant.calculateKeyingMaterial().getEncoded(false);
 
@@ -299,6 +328,8 @@ public class SecureChannel {
                 outgoing, (short) 0, (short) outgoing.length
         );
         ResponseAPDU apdu = channel.transmit(new CommandAPDU(outgoing));
+        checkResponseAccept(response);
+        checkResponseLength(response, 2*CHALLANGE_LENGTH, 2*CHALLANGE_LENGTH);
         // handle response
         byte[] incoming = apdu.getData();
         aes.decrypt(
@@ -316,8 +347,22 @@ public class SecureChannel {
         }
     }
 
-    private void checkResponseAccept(ResponseAPDU response) {
+    private void checkResponseAccept(ResponseAPDU response) throws ErrorResponseException {
+        if ((short) response.getSW() == SW_NO_ERROR ) {
+            throw new ErrorResponseException((short) response.getSW());
+        }
+    }
 
+    private ResponseAPDU checkResponseLength(
+            ResponseAPDU response,
+            int lower,
+            int upper
+    ) throws ResponseFormatException {
+        int l = response.getData().length;
+        if (lower > l || l > upper) {
+            throw new ResponseFormatException();
+        }
+        return response;
     }
 
     private byte getLSB(int length) {

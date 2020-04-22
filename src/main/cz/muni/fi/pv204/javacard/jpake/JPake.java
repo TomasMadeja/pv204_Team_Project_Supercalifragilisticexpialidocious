@@ -1,5 +1,6 @@
 package cz.muni.fi.pv204.javacard.jpake;
 
+
 //import org.bouncycastle.asn1.x9.ECNamedCurveTable;
 import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.ECDomainParameters;
@@ -18,7 +19,6 @@ import org.bouncycastle.math.ec.ECCurve;
 
 
 public class JPake {
-
 
     public final JPakeECParam group; // TODO set some default
     public final ECParameterSpec ecSpec;
@@ -145,6 +145,7 @@ public class JPake {
     }
 */
 
+  
     public BigInteger[] createRound2PayloadToSend(
             byte[] Gx3,
             byte[] Gx4,
@@ -189,6 +190,7 @@ public class JPake {
         //TODO fill the above into byte[] knowdledgeProofForX4sV, and BigInteger knowledgeProofForX4sr
         
     }
+
 
     /*
         public void createRound3PayloadToSend(
@@ -249,9 +251,12 @@ public class JPake {
             byte[] Gx3,
             byte[] Gx4,
             byte[] B,
-            byte[] knowledgeProofForX3,
-            byte[] knowledgeProofForX4,
-            byte[] knowledgeProofForX4s,
+            byte[] knowledgeProofForX3V,
+            BigInteger knowledgeProofForX3r,
+            byte[] knowledgeProofForX4V,
+            BigInteger knowledgeProofForX4r,
+            byte[] knowledgeProofForX4sV,
+            BigInteger knowledgeProofForX4sr,
             byte[] participantId
     ) {
     }
@@ -259,7 +264,8 @@ public class JPake {
 
     public boolean validateRound3PayloadReceived(
             byte[] A,
-            BigInteger knowledgeProofForX2s,
+            byte[] knowledgeProofForX2sV,
+            BigInteger knowledgeProofForX2sr,
             byte[] participantId
     ) {
         try {
@@ -302,8 +308,6 @@ public class JPake {
             return result;
 
         }
-
-
 
 
     public void calculateKeyingMaterial(

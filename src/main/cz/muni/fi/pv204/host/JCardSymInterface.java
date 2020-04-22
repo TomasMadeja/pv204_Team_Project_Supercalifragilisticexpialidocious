@@ -7,10 +7,10 @@ import cz.muni.fi.pv204.javacard.SCApplet;
 
 public class JCardSymInterface extends CardManager {
 
-    private static String APPLET_AID = "FFFFFFFFFF010101";
-    private static String PIN = "01010101";
-    private static byte APPLET_AID_BYTE[] = Util.hexStringToByteArray(APPLET_AID);
-    private static byte INSTALL_DATA_BYTE[] = Util.hexStringToByteArray("04" + PIN + "08" + APPLET_AID);
+    public static String APPLET_AID = "FFFFFFFFFF010101";
+    public static String PIN = "01010101";
+    public static byte APPLET_AID_BYTE[] = Util.hexStringToByteArray(APPLET_AID);
+    public static byte INSTALL_DATA_BYTE[] = Util.hexStringToByteArray("04" + PIN + "08" + APPLET_AID);
 
 
     private RunConfig runCfg;

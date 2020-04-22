@@ -1,39 +1,32 @@
 package cz.muni.fi.pv204.javacard.jpake;
 
-import cz.muni.fi.pv204.javacard.crypto.NIZKP;
-import javacard.framework.PIN;
+import javacard.framework.OwnerPIN;
+import javacard.framework.Util;
 
-public class JPakePassword implements PIN {
+public class JPakePassword extends OwnerPIN {
 
-    public JPakePassword(byte tryLimit, byte maxPasswordSize, NIZKP zkp) {
+    private byte[] password;
+    private byte[] wrongPassword;
 
+    public JPakePassword(byte tries, byte length) {
+        super(tries, length);
+        password = new byte[length];
+        wrongPassword = new byte[length];
     }
 
     @Override
-    public byte getTriesRemaining() {
-        return 0;
+    public void update(byte[] pin, short offset, byte length) {
+        Util.arrayCopy(pin, offset, password, (short) 0, length);
+        Util.arrayCopy(pin, offset, wrongPassword, (short) 0, length);
+        wrongPassword[0] ^= 0xff;
+        super.update(pin, offset, length);
     }
 
-    @Override
-    public boolean check(byte[] bytes, short i, byte b) throws ArrayIndexOutOfBoundsException, NullPointerException {
-        return false;
+    public void decrement() {
+        super.check(wrongPassword, (short) 0, (byte) wrongPassword.length);
     }
 
-    @Override
-    public boolean isValidated() {
-        return false;
-    }
-
-    @Override
-    public void reset() {
-
-    }
-
-    public void update(byte[] data, short offset, short length) {
-
-    }
-
-    public void generateProof() {
-
+    public void correct() {
+        super.check(password, (short) 0, (byte) password.length);
     }
 }

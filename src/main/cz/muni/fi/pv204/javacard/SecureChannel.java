@@ -2,6 +2,8 @@ package cz.muni.fi.pv204.javacard;
 
 import cz.muni.fi.pv204.javacard.crypto.MagicAes;
 import cz.muni.fi.pv204.javacard.jpake.JPake;
+import javacard.framework.ISO7816;
+import javacard.framework.ISOException;
 import javacard.framework.JCSystem;
 import javacard.framework.Util;
 
@@ -10,9 +12,14 @@ import cz.muni.fi.pv204.javacard.jpake.JPakePassword;
 import javacard.security.RandomData;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.math.BigInteger;
+
+
 public class SecureChannel {
 
     public static final short challengeLength = 32; // sha 256 - 128 for AES IV
+    public static final short SIZE_ID = 10;
+    public static final short SIZE_EC_POINT = 65;
 
     public static final byte ROUND_1_ID = 0x11;
     public static final byte ROUND_1_GX = 0x12;
@@ -46,7 +53,12 @@ public class SecureChannel {
     private byte[] Gx4;
     private byte[] A;
     private byte[] B;
-    private byte[] zkp1;
+    private byte[] zkp1_v;
+    private BigInteger zkp1_r;
+    private byte[] zkp2_v;
+    private BigInteger zkp2_r;
+    private byte[] zkp3_v;
+    private BigInteger zkp3_r;
     private byte[] zkp2;
     private byte[] zkp3;
     private byte[] participantIDA;
@@ -93,62 +105,80 @@ public class SecureChannel {
             case ROUND_1_ID:
                 // TODO do something
                 state[0] = ROUND_1_GX;
+                parseIDA(inBuffer, inOffset, inLen);
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_1_GX:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
-                // TODO do something
+                parseECPoint(inBuffer, inOffset, inLen, Gx1);
+                parseECPoint(inBuffer, (short)(inOffset+SIZE_EC_POINT), (short)(inLen-SIZE_EC_POINT), Gx2);
                 state[0] = ROUND_1_ZKP1;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_1_ZKP1:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
-                // TODO do something
+                parseZKP(inBuffer, inOffset, inLen, (short) 1);
                 state[0] = ROUND_1_ZKP2;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_1_ZKP2:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
-                // TODO do something
+                parseZKP(inBuffer, inOffset, inLen, (short) 2);
                 state[0] = ROUND_2_GX; // Response should contain participant ID
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_2_GX:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
                 // TODO do something
                 state[0] = ROUND_2_B;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_2_B:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
                 // TODO do something
                 state[0] = ROUND_2_ZKP1;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                break;
             case ROUND_2_ZKP1:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
                 // TODO do something
                 state[0] = ROUND_2_ZKP2;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_2_ZKP2:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
                 // TODO do something
                 state[0] = ROUND_2_ZKP3;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                break;
             case ROUND_2_ZKP3:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
                 // TODO do something
                 state[0] = ROUND_3_A;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                break;
             case ROUND_3_A:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
-                // TODO do something
+                parseECPoint(inBuffer, inOffset, inLen, A);
                 state[0] = ROUND_3_ZKP1;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                break;
             case ROUND_3_ZKP1:
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
-                // TODO do something
+                parseZKP(inBuffer, inOffset, inLen, (short) 1);
                 state[0] = ROUND_HELLO;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                break;
             case ROUND_HELLO:
                 if (state[0] != command) throw new NotImplementedException(); // TODO
                 inLen = unwrap(
@@ -160,6 +190,7 @@ public class SecureChannel {
                         outBuffer, outOffset, outLen
                 );
                 state[0] = ESTABLISHED;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             default:
                 if (state[0] != ESTABLISHED) throw new NotImplementedException(); // TODO
@@ -203,149 +234,69 @@ public class SecureChannel {
         );
     }
 
-    private void establishmentRound2(
-            byte[] incoming, short incomingOffset, short incomingLength,
-            byte[] outgoing, short outgoingOffset, short outgoingLength
+    private void parseIDA(
+            byte[] incoming, short incomingOffset, short incomingLength
     ) {
-        if (incomingLength != (short) (
-                2*jpake.sizeOfGx + 2*jpake.sizeOfZKP + jpake.sizeOfID
-        )) {
-            throw new NotImplementedException();
-        }
-        else if (outgoingLength != (short) (
-                2*jpake.sizeOfGx + jpake.sizeOfAB + 3*jpake.sizeOfZKP + jpake.sizeOfID
-        )) {
-            throw new NotImplementedException();
-        }
-        // Incoming Round 1, outgoing Round 2
-        // Incoming
-        short offset = incomingOffset; // Gx1
         Util.arrayCopy(
-                incoming, offset,
-                Gx1, (short) 0,
-                jpake.sizeOfGx
-        );
-        offset += jpake.sizeOfGx; // Gx2
-        Util.arrayCopy(
-                incoming, offset,
-                Gx2, (short) 0,
-                jpake.sizeOfGx
-        );
-        offset += jpake.sizeOfGx; // ZKP x1
-        Util.arrayCopy(
-                incoming, offset,
-                zkp1, (short) 0,
-                jpake.sizeOfZKP
-        );
-        offset += jpake.sizeOfZKP; // ZKP x2
-        Util.arrayCopy(
-                incoming, offset,
-                zkp2, (short) 0,
-                jpake.sizeOfZKP
-        );
-        offset += jpake.sizeOfZKP; // ID
-        Util.arrayCopy(
-                incoming, offset,
+                incoming, incomingOffset,
                 participantIDA, (short) 0,
-                jpake.sizeOfID
-        );
-        // Validate and Build round 2
-        jpake.validateRound1PayloadReceived(Gx1, Gx2, zkp1, zkp2, participantIDA);
-        jpake.createRound2PayloadToSend(Gx3, Gx4, B, zkp1, zkp2, zkp3, participantIDB);
-        // Outgoing
-        offset = outgoingOffset; // Gx3
-        Util.arrayCopy(
-                Gx3, (short) 0,
-                outgoing, offset,
-                jpake.sizeOfGx
-        );
-        offset += jpake.sizeOfGx; // Gx2
-        Util.arrayCopy(
-                Gx4, (short) 0,
-                outgoing, offset,
-                jpake.sizeOfGx
-        );
-        offset += jpake.sizeOfGx; // B
-        Util.arrayCopy(
-                B, (short) 0,
-                outgoing, offset,
-                jpake.sizeOfAB
-        );
-        offset += jpake.sizeOfAB; // ZKP X3
-        Util.arrayCopy(
-                zkp1, (short) 0,
-                outgoing, offset,
-                jpake.sizeOfZKP
-        );
-        offset += jpake.sizeOfZKP; // ZKP X4
-        Util.arrayCopy(
-                zkp2, (short) 0,
-                outgoing, offset,
-                jpake.sizeOfZKP
-        );
-        offset += jpake.sizeOfZKP; // ZKP X4s
-        Util.arrayCopy(
-                zkp3, (short) 0,
-                outgoing, offset,
-                jpake.sizeOfZKP
-        );
-        offset += jpake.sizeOfZKP; // ID
-        Util.arrayCopy(
-                participantIDB, (short) 0,
-                outgoing, offset,
-                jpake.sizeOfID
+                SIZE_ID
         );
     }
 
-    private void establishmentChallenge(
-            byte[] incoming, short incomingOffset, short incomingLength,
-            byte[] outgoing, short outgoingOffset, short outgoingLength
+    private void parseECPoint(
+            byte[] incoming, short incomingOffset, short incomingLength, byte[] outgoing
     ) {
-        // Incoming Round 3, outgoing random challange
-        if (incomingLength != (short) (
-                jpake.sizeOfAB + jpake.sizeOfZKP + jpake.sizeOfID
-        )) {
-            throw new NotImplementedException();
-        }
-        else if (outgoingLength != (short) (
-                2*jpake.sizeOfGx + jpake.sizeOfAB + 3*jpake.sizeOfZKP + jpake.sizeOfID
-        )) {
-            throw new NotImplementedException();
-        }
-        // TODO compare IDs between rounds
-        // Incoming Round 3, outgoing challange
-        // Incoming
-        short offset = incomingOffset; // A
         Util.arrayCopy(
-                incoming, offset,
-                A, (short) 0,
-                jpake.sizeOfAB
-        );
-        offset += jpake.sizeOfAB; // ZKP X2s
-        Util.arrayCopy(
-                incoming, offset,
-                zkp1, (short) 0,
-                jpake.sizeOfZKP
-        );
-        offset += jpake.sizeOfZKP; // ID
-        Util.arrayCopy(
-                incoming, offset,
-                participantIDA, (short) 0,
-                jpake.sizeOfID
-        );
-        // Validate and Build round 2
-        jpake.validateRound3PayloadReceived(A, zkp1, participantIDA);
-        jpake.calculateKeyingMaterial(keyingMaterial);
-
-        rand.nextBytes(challenge, (short) 0, challengeLength);
-        aes.generateKey(keyingMaterial, challenge);
-        // Outgoing
-        Util.arrayCopy(
-                challenge, (short) 0,
-                outgoing, outgoingOffset,
-                challengeLength
+                incoming, incomingOffset,
+                outgoing, (short) 0,
+                SIZE_EC_POINT
         );
     }
+
+    private void parseZKP(
+            byte[] incoming, short incomingOffset, short incomingLength, short t
+    ) {
+        byte[] target;
+        switch (t) {
+            case 1:
+                target = zkp1_v;
+                break;
+            case 2:
+                target = zkp2_v;
+                break;
+            case 3:
+                target = zkp3_v;
+                break;
+
+        }
+        Util.arrayCopy(
+                incoming, incomingOffset,
+                zkp1_v, (short) 0,
+                SIZE_EC_POINT
+        );
+        byte[] tmp = new byte[incomingLength-SIZE_EC_POINT];
+        Util.arrayCopy(
+                incoming, (short) (incomingOffset+SIZE_EC_POINT),
+                zkp1_v, (short) 0,
+                (short) (incomingLength-SIZE_EC_POINT)
+        );
+        BigInteger tmpBigInteger = new BigInteger(tmp);
+        switch (t) {
+            case 1:
+                zkp1_r = tmpBigInteger;
+                break;
+            case 2:
+                zkp2_r = tmpBigInteger;
+                break;
+            case 3:
+                zkp3_r = tmpBigInteger;
+                break;
+
+        }
+    }
+
+
 
     private void establishmentHello(
             byte[] incoming, short incomingOffset, short incomingLength,

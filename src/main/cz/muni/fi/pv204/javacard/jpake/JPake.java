@@ -1,5 +1,7 @@
 package cz.muni.fi.pv204.javacard.jpake;
 
+import java.math.BigInteger;
+
 public class JPake {
 
 
@@ -39,8 +41,10 @@ public class JPake {
     public void createRound1PayloadToSend(
            byte[] Gx1,
            byte[] Gx2,
-           byte[] knowledgeProofForX1,
-           byte[] knowdledgeProofForX2s,
+           byte[] knowledgeProofForX1V,
+           BigInteger knowledgeProofForX1r,
+           byte[] knowdledgeProofForX2sV,
+           BigInteger knowledgeProofForX2r,
            byte[] participantId
     ) { }
 
@@ -49,16 +53,20 @@ public class JPake {
             byte[] Gx3,
             byte[] Gx4,
             byte[] B,
-            byte[] knowledgeProofForX3,
-            byte[] knowdledgeProofForX4,
-            byte[] knowdledgeProofForX4s,
+            byte[] knowledgeProofForX3V,
+            BigInteger knowledgeProofForX3r,
+            byte[] knowdledgeProofForX4V,
+            BigInteger knowledgeProofForX4r,
+            byte[] knowdledgeProofForX4sV,
+            BigInteger knowledgeProofForX4sr,
             byte[] participantId
     ) { }
 
 
     public void createRound3PayloadToSend(
             byte[] A,
-            byte[] knowdledgeProofForX2s,
+            byte[] knowdledgeProofForX2sV,
+            BigInteger knowledgeProofForX2sr,
             byte[] participantId
     ) { }
 
@@ -66,8 +74,10 @@ public class JPake {
     public void validateRound1PayloadReceived(
             byte[] Gx1,
             byte[] Gx2,
-            byte[] knowledgeProofForX1,
-            byte[] knowledgeProofForX2,
+            byte[] knowledgeProofForX1V,
+            BigInteger knowledgeProofForX1r,
+            byte[] knowledgeProofForX2V,
+            BigInteger knowledgeProofForX2r,
             byte[] participantId
     ) { }
 
@@ -76,16 +86,20 @@ public class JPake {
             byte[] Gx3,
             byte[] Gx4,
             byte[] B,
-            byte[] knowledgeProofForX3,
-            byte[] knowledgeProofForX4,
-            byte[] knowledgeProofForX4s,
+            byte[] knowledgeProofForX3V,
+            BigInteger knowledgeProofForX3r,
+            byte[] knowledgeProofForX4V,
+            BigInteger knowledgeProofForX4r,
+            byte[] knowledgeProofForX4sV,
+            BigInteger knowledgeProofForX4sr,
             byte[] participantId
     ) { }
 
 
     public void validateRound3PayloadReceived(
             byte[] A,
-            byte[] knowledgeProofForX2s,
+            byte[] knowledgeProofForX2sV,
+            BigInteger knowledgeProofForX2sr,
             byte[] participantId
     ) { }
 

@@ -63,7 +63,6 @@ public class SecureChannel {
     private byte[] zkp3;
     private byte[] participantIDA;
     private byte[] participantIDB;
-    private byte[] keyingMaterial;
     private byte[] challenge;
 
     public static class UnexpectedError extends Exception {
@@ -395,12 +394,15 @@ public class SecureChannel {
     }
 
     private void validateRound1() {
-        jpake.validateRound1PayloadReceived(
+        if (!jpake.validateRound1PayloadReceived(
                 Gx1, Gx2,
                 zkp1_v, zkp1_r,
                 zkp2_v, zkp2_r,
                 participantIDA
-        );
+        )) {
+            state[0] = 0x00;
+            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+        }
     }
 
     private void generateRound2() {
@@ -420,11 +422,14 @@ public class SecureChannel {
     }
 
     private void validateRound3() {
-        jpake.validateRound3PayloadReceived(
+        if (!jpake.validateRound3PayloadReceived(
                 B,
                 zkp1_v, zkp1_r,
                 participantIDA
-        );
+        )) {
+            state[0] = 0x00;
+            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+        }
     }
 
     private short prepareForHello(
@@ -433,9 +438,11 @@ public class SecureChannel {
         if (outgoingLength < challengeLength) {
             throw new UnexpectedError(); // TODO
         }
-        jpake.calculateKeyingMaterial(keyingMaterial);
         rand.nextBytes(challenge, (short) 0, challengeLength);
-        aes.generateKey(keyingMaterial, challenge);
+        aes.generateKey(
+                jpake.calculateKeyingMaterial(),
+                challenge
+        );
         // Outgoing
         Util.arrayCopy(
                 challenge, (short) 0,
@@ -453,6 +460,7 @@ public class SecureChannel {
             if ( incoming[incomingOffset+challengeLength+i] != (byte) (
                     challenge[i] ^ incoming[incomingOffset+i]
             ) ) {
+                state[0] = 0x00;
                 ISOException.throwIt(ISO7816.SW_DATA_INVALID); // TODO throw something
             }
         }
@@ -466,6 +474,7 @@ public class SecureChannel {
 
     private void checkPinSTate() {
         if (pin.getTriesRemaining() == 0x00) {
+            state[0] = 0x00;
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
         }
     }
@@ -479,6 +488,7 @@ public class SecureChannel {
     private void checkState(byte expected) {
         checkPinSTate();
         if (state[0] != expected) {
+            state[0] = 0x00;
             ISOException.throwIt(ISO7816.SW_COMMAND_NOT_ALLOWED);
         }
     }

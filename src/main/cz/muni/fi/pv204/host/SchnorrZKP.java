@@ -43,7 +43,7 @@ public class SchnorrZKP {
         	
         	BigInteger h = Util.getSHA256(generator, V, X, userID); // h
 
-        	r = v.subtract(x.multiply(h)).mod(n); // r = v-x*h mod n   	
+        	r = v.subtract(x.multiply(h)); // r = v-x*h mod n
         }
     	
     	public ECPoint getV() {

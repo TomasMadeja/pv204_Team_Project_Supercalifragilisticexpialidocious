@@ -32,7 +32,7 @@ public class SecureChannel {
     public static final byte[] INS_R1_ZKP1 = Util.hexStringToByteArray("08130000");
     public static final byte[] INS_R1_ZKP2 = Util.hexStringToByteArray("08140000");
 
-    public static final byte[] INS_R2_GX = Util.hexStringToByteArray("08110000");
+//    public static final byte[] INS_R2_GX = Util.hexStringToByteArray("08110000"); // this state should not be need
     public static final byte[] INS_R2_B = Util.hexStringToByteArray("08120000");
     public static final byte[] INS_R2_ZKP1 = Util.hexStringToByteArray("08130000");
     public static final byte[] INS_R2_ZKP2 = Util.hexStringToByteArray("08140000");

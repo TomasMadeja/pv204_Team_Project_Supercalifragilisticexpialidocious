@@ -99,7 +99,7 @@ public class SchnorrZKP {
     	
     	// Now check if V = G*r + X*h. 
     	// Given that {G, X} are valid points on curve, the equality implies that V is also a point on curve.
-    	if (V.equals(generator.multiply(r).add(X.multiply(h.mod(n))))) {
+    	if (V.equals(generator.multiply(r).add(X.multiply(h)))) {
     		return true;
     	}
     	else {

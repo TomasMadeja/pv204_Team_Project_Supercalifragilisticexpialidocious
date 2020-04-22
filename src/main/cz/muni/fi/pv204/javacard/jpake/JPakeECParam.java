@@ -17,7 +17,7 @@ import org.bouncycastle.math.ec.ECCurve;
 public class JPakeECParam {
 
 
-    public ECPoint addPoints(ECPoint a, ECPoint b)
+    public  static ECPoint addPoints(ECPoint a, ECPoint b)
     {
         X9ECParameters curve = ECNamedCurveTable.getByName("P-256");
         ECDomainParameters ecparams = new ECDomainParameters(curve.getCurve(), curve.getG(), curve.getN(), curve.getH(), curve.getSeed());
@@ -25,7 +25,7 @@ public class JPakeECParam {
         result= a.add(b);
         return result;
     }
-    public ECPoint mulPoints(ECPoint a, BigInteger scalar)
+    public static ECPoint mulPoints(ECPoint a, BigInteger scalar)
     {
         X9ECParameters curve = ECNamedCurveTable.getByName("P-256");
         ECDomainParameters ecparams = new ECDomainParameters(curve.getCurve(), curve.getG(), curve.getN(), curve.getH(), curve.getSeed());
@@ -34,7 +34,7 @@ public class JPakeECParam {
         return result;
     }
 
-    public ECPoint getGenCard(ECPoint P1, ECPoint P2, ECPoint P3, BigInteger x2S)
+    public static ECPoint getGenCard(ECPoint P1, ECPoint P2, ECPoint P3, BigInteger x2S)
     {
 //Alice -> Bob: A = (G1 + G3 + G4) x [x2*s] and a ZKP for x2*s
 
@@ -45,7 +45,7 @@ public class JPakeECParam {
         result = mulPoints(temp2,x2S);
         return result;
     }
-    public ECPoint getSharedKey(ECPoint host, ECPoint P4, BigInteger x2S, BigInteger x2 )
+    public static ECPoint getSharedKey(ECPoint host, ECPoint P4, BigInteger x2S, BigInteger x2 )
     {
 //Alice computes Ka = (B - (G4 x [x2*s])) x [x2]
 
@@ -58,7 +58,7 @@ public class JPakeECParam {
 
     }
 
-public BigInteger byteArrayToBigint(byte[] input)
+public static BigInteger byteArrayToBigint(byte[] input)
 {
         BigInteger result = new BigInteger(input);
         return result;

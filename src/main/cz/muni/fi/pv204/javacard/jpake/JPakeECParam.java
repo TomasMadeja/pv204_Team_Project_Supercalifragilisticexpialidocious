@@ -58,7 +58,7 @@ public BigInteger byteArrayToBigint(byte[] input)
         return result;
 }
 
-public ECPoint byteArrayToECPoint(byte[] input)
+public static ECPoint byteArrayToECPoint(byte[] input)
 {
     X9ECParameters curve = ECNamedCurveTable.getByName("P-256");
     ECDomainParameters ecparams = new ECDomainParameters(curve.getCurve(), curve.getG(), curve.getN(), curve.getH(), curve.getSeed());

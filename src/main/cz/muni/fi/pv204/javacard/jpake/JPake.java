@@ -21,37 +21,76 @@ public class JPake {
 
 
 
-    private JPakeECParam group; // TODO set some default
+    public final JPakeECParam group; // TODO set some default
+    public final ECParameterSpec ecSpec;
+    public final ECCurve curve; 
+    //private BigInteger a = curve.getA().toBigInteger();
+    //private BigInteger b = curve.getB().toBigInteger();
+    //private BigInteger q = curve.getQ();
+    //private BigInteger coFactor = ecSpec.getH(); // Not using the symbol "h" here to avoid confusion as h will be used later in SchnorrZKP. 
+    private BigInteger n;
+    private ECPoint G;
     public final short sizeOfGx;
     public final short sizeOfAB;
     public final short sizeOfZKP;
     public final short sizeOfID;
+    
     private char[] participantID;
     private byte[] participantID_byte;
-    private JPakePassword password;
+    private JPakePassword password; //TODO getnout cosi blabla
+    
+     /**
+     * Alice's x1 or Bob's x3.
+     */
+    private BigInteger x1;
+    /**
+     * Alice's x2 or Bob's x4.
+     */
+    private BigInteger x2;
+    /**
+     * Alice's g^x1 or Bob's g^x3.
+     */
+    private ECPoint Gx1;
+    /**
+     * Alice's g^x2 or Bob's g^x4.
+     */
+    private ECPoint Gx2;
+    /**
+     * Alice's g^x3 or Bob's g^x1.
+     */
+    private ECPoint Gx3;
+    /**
+     * Alice's g^x4 or Bob's g^x2.
+     */
+    private ECPoint Gx4;
+    /**
+     * Alice's B or Bob's A.
+     */
+    private ECPoint B;
     private byte digest;
-    private byte []Gx1;
-    private byte []Gx2;
-    private byte []Gx3;
-    private byte []Gx4;
-
-    private byte[] knowledgeProofForX1;
-    private byte[] knowledgeProofForX2;
-    private byte[] knowledgeProofForX3;
-    private byte[] knowledgeProofForX4;
-
-    private byte[] knowledgeProofForX1s;
-    private byte[] knowledgeProofForX2s;
-    private byte[] knowledgeProofForX3s;
-    private byte[] knowledgeProofForX4s;
-
-    private byte[]A;
-    private byte[]B;
 
 
+    private BigInteger knowledgeProofForX1r;
+    private BigInteger knowledgeProofForX2r;
+    private BigInteger knowledgeProofForX3r;
+    private BigInteger knowledgeProofForX4r;
+    
+    private ECPoint knowledgeProofForX1V;
+    private ECPoint knowledgeProofForX2V;
+    private ECPoint knowledgeProofForX3V;
+    private ECPoint knowledgeProofForX4V;
+
+
+    private byte[] knowledgeProofForX2sr;
+    private byte[] knowledgeProofForX4sr;
+    private ECPoint knowledgeProofForX2sV;
+    private ECPoint knowledgeProofForX4sV;
 
 
 
+
+
+/*
     public JPake(
             char[] participantID,
             JPakePassword password
@@ -67,7 +106,7 @@ public class JPake {
 
 
     }
-
+*/
 
     public JPake(
             char[] participantID,
@@ -80,14 +119,18 @@ public class JPake {
         sizeOfAB = 1;
         sizeOfZKP = 1;
         sizeOfID = 1;
-        this.participantID=participantID;
+        this.participantID=participantID; // add byte[] equivalents?
         this.password=password;
+        this.ecSpec = ECNamedCurveTable.getParameterSpec("P-256");  
         this.group = group;
+        this.curve = ecSpec.getCurve();
         this.digest = digest;
+        this.n = ecSpec.getN();
+        this.G = ecSpec.getG();
 
     }
 
-
+/*
     public void createRound1PayloadToSend(
             byte[] Gx1,
             byte[] Gx2,
@@ -101,27 +144,34 @@ public class JPake {
         this.knowledgeProofForX2s=knowdledgeProofForX2s;
         this.participantID_byte=participantId;
     }
+*/
 
-
-    public void createRound2PayloadToSend(
+    public BigInteger[] createRound2PayloadToSend(
             byte[] Gx3,
             byte[] Gx4,
             byte[] B,
-            byte[] knowledgeProofForX3,
-            byte[] knowdledgeProofForX4,
-            byte[] knowdledgeProofForX4s,
+            byte[] knowledgeProofForX3V,
+            BigInteger knowledgeProofForX3r, //ignored
+            byte[] knowdledgeProofForX4V,
+            BigInteger knowledgeProofForX4r, //ignored
+            byte[] knowdledgeProofForX4sV,
+            BigInteger knowledgeProofForX4sr, //ignored
             byte[] participantId
-    ) {
-        this.Gx3=Gx3;
-        this.Gx4= Gx4;
-        this.B=B;
-        this.knowledgeProofForX3=knowledgeProofForX3;
-        this.knowledgeProofForX4=knowdledgeProofForX4;
-        this.knowledgeProofForX4s=knowdledgeProofForX4s;
-        this.participantID_byte=participantId;
+    ) { 
+        this.x1 = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE, 
+    			n.subtract(BigInteger.ONE), new SecureRandom());
+        this.x2 = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE, 
+    			n.subtract(BigInteger.ONE), new SecureRandom());
+        
+        this.Gx1 = G.multiply(x1);
+        this.Gx2 = G.multiply(x2);
+        //TODO copy them into the input parameters
+        
+        
+        return new BigInteger[0];
     }
 
-
+/*
     public void createRound3PayloadToSend(
             byte[] A,
             byte[] knowdledgeProofForX2s,
@@ -132,8 +182,8 @@ public class JPake {
         this.participantID_byte=participantId;
     }
 
-
-    public void validateRound1PayloadReceived(
+*/
+    public boolean validateRound1PayloadReceived(
             byte[] Gx1,
             byte[] Gx2,
             byte[] knowledgeProofForX1V,
@@ -141,7 +191,7 @@ public class JPake {
             byte[] knowledgeProofForX2V,
             BigInteger knowledgeProofForX2r,
             byte[] participantId
-    ) {
+    ) { 
         try {
             //X9ECParameters curve = ECNamedCurveTable.getByName("P-256");
             ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("P-256");
@@ -165,27 +215,28 @@ public class JPake {
             //BigInteger h = JPakeECParam.getSHA256(ecSpec.getG(), V, Gx1Point, Arrays.toString(participantID));
             //verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, ECPoint V, BigInteger r, BigInteger q, String userID) {	
             if (!JPakeECParam.verifyZKP(ecSpec, ecSpec.getG(), Gx1Point, V1, r1, ecSpec.getN(), Arrays.toString(participantID)) ) {
-                throw new Exception("The ZKP proof for x1 failed.");
+                return false;
             }
             ECPoint V2 = JPakeECParam.byteArrayToECPoint(knowledgeProofForX2V);
             BigInteger r2 = knowledgeProofForX2r;
             ECPoint Gx2Point = JPakeECParam.byteArrayToECPoint(Gx2);
             if (!JPakeECParam.verifyZKP(ecSpec, ecSpec.getG(), Gx2Point, V2, r2, ecSpec.getN(), Arrays.toString(participantID)) ) {
-                throw new Exception("The ZKP proof for x1 failed.");
+                return false;
             }
 
             }
         catch(Exception e)
         {
-            System.out.println("exception in JPake");
-            e.printStackTrace();
+            //System.out.println("exception in JPake");
+            //e.printStackTrace();
+            return false;
         }
 
-
+        return true;
 
     }
 
-
+/*
     public void validateRound2PayloadReceived(
             byte[] Gx3,
             byte[] Gx4,
@@ -194,12 +245,15 @@ public class JPake {
             byte[] knowledgeProofForX4,
             byte[] knowledgeProofForX4s,
             byte[] participantId
-    ) { }
-
+    ) {
+    
+    
+    }
+*/
 
     public void validateRound3PayloadReceived(
             byte[] A,
-            byte[] knowledgeProofForX2s,
+            BigInteger knowledgeProofForX2s,
             byte[] participantId
     ) { }
 

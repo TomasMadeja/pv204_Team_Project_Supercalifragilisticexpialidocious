@@ -6,10 +6,16 @@ import org.apache.groovy.json.internal.ArrayUtils;
 import org.bouncycastle.crypto.CryptoException;
 import sun.security.util.ArrayUtil;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.ShortBufferException;
 import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 import java.math.BigInteger;
+import java.security.DigestException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
 import java.security.SecureRandom;
 import java.security.spec.ECPoint;
 
@@ -29,7 +35,7 @@ public class SecureChannel {
     public static final byte[] INS_R2_ZKP2 = Util.hexStringToByteArray("08140000");
     public static final byte[] INS_R2_ZKP3 = Util.hexStringToByteArray("08150000");
 
-    public static final byte[] INS_R3_A = Util.hexStringToByteArray("08310000");
+    public static final byte[] INS_R3_A = Util.hexStringToByteArray("08310000" + "41");
     public static final byte[] INS_R3_ZKP1 = Util.hexStringToByteArray("08320000");
 
     public static final byte[] INS_HELLO = Util.hexStringToByteArray("08420000");
@@ -60,6 +66,14 @@ public class SecureChannel {
 
     }
 
+    public static class IncorrectPasswordException extends Exception {
+
+        public IncorrectPasswordException() {
+            super();
+        }
+
+    }
+
     private JCardSymInterface channel;
     private MagicAes aes;
     private SecureRandom rand;
@@ -84,7 +98,11 @@ public class SecureChannel {
         participant = new Participant(participantId, password);
     }
 
-    public void establishSC() throws Exception {
+    public void establishSC() throws CardException, ErrorResponseException,
+            CryptoException, ResponseFormatException, BadPaddingException,
+            InvalidKeyException, IllegalBlockSizeException, ShortBufferException,
+            IncorrectPasswordException, InvalidAlgorithmParameterException,
+            DigestException {
         ResponseAPDU r;
         r = establishmentRound1();
         validationRound2(r);
@@ -95,7 +113,8 @@ public class SecureChannel {
     public void wrap() { }
     public void unwrap() {}
 
-    private ResponseAPDU establishmentRound1() throws CardException, ErrorResponseException {
+    private ResponseAPDU establishmentRound1(
+    ) throws CardException, ErrorResponseException {
 
         Round1Payload round1 = participant.createRound1PayloadToSend();
         byte[] Gx1 = round1.getGx1().getEncoded(false);
@@ -164,7 +183,8 @@ public class SecureChannel {
 
     private void validationRound2(
             ResponseAPDU response
-    ) throws CardException, CryptoException, ErrorResponseException, ResponseFormatException {
+    ) throws CardException, CryptoException, ErrorResponseException,
+            ResponseFormatException {
         short sizeOfGx = SIZE_ECPOINT;
 
         byte[] Gx3 = new byte[sizeOfGx];
@@ -261,7 +281,8 @@ public class SecureChannel {
         );
     }
 
-    private ResponseAPDU establishmentRound3() throws CardException, ErrorResponseException {
+    private ResponseAPDU establishmentRound3(
+    ) throws CardException, ErrorResponseException {
         short sizeOfGx = SIZE_ECPOINT;
         byte[] A = new byte[sizeOfGx];
         byte[] zkp1;
@@ -299,14 +320,13 @@ public class SecureChannel {
 
     private void establishmentHello(
             ResponseAPDU response
-    ) throws Exception {
+    ) throws ResponseFormatException, CardException, ErrorResponseException,
+            IncorrectPasswordException, InvalidAlgorithmParameterException,
+            ShortBufferException, InvalidKeyException, IllegalBlockSizeException,
+            BadPaddingException, DigestException {
         byte[] challenge = response.getData();
-        if (challenge.length != CHALLANGE_LENGTH) {
-            throw new Exception(); // TODO add specific range
-        }
 
         checkResponseLength(response, CHALLANGE_LENGTH, CHALLANGE_LENGTH);
-        // TODO add call for keying material
         byte[] keyingMaterial = participant.calculateKeyingMaterial().getEncoded(false);
 
         aes.generateKey(keyingMaterial, challenge);
@@ -337,12 +357,9 @@ public class SecureChannel {
                 incoming, (short) 0, (short) incoming.length
         );
 
-        if (incoming.length != 2*CHALLANGE_LENGTH) {
-            throw new Exception(); // TODO add specific range
-        }
         for (short i = 0; i < CHALLANGE_LENGTH; i++) {
             if ( incoming[CHALLANGE_LENGTH+i] != (byte) (challenge[i] ^ r[i]) ) {
-                throw new Exception(); // TODO throw something
+                throw new IncorrectPasswordException();
             }
         }
     }

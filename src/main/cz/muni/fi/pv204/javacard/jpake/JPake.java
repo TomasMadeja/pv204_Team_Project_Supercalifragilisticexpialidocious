@@ -135,8 +135,10 @@ public class JPake {
     public void validateRound1PayloadReceived(
             byte[] Gx1,
             byte[] Gx2,
-            byte[] knowledgeProofForX1,
-            byte[] knowledgeProofForX2,
+            byte[] knowledgeProofForX1V,
+            BigInteger knowledgeProofForX1r,
+            byte[] knowledgeProofForX2V,
+            BigInteger knowledgeProofForX2r,
             byte[] participantId
     ) {
         try {
@@ -152,9 +154,10 @@ public class JPake {
             ecparams.getCurve().decodePoint((JPakeECParam.byteArrayToECPoint(Gx1)).getEncoded(false));
             ecparams.getCurve().decodePoint((JPakeECParam.byteArrayToECPoint(Gx2)).getEncoded(false));
 
-            //
-            
-
+            //beginning of checking the proof
+            ECPoint V = JPakeECParam.byteArrayToECPoint(knowledgeProofForX1V);
+            BigInteger r = knowledgeProofForX1r;
+            BigInteger h = getSHA256(generator, V, Gx1, userID);
 
 
             }

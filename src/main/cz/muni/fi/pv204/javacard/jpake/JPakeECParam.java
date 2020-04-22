@@ -9,6 +9,8 @@ import org.bouncycastle.crypto.digests.SHA256Digest;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import javacard.security.MessageDigest;
+import org.bouncycastle.jce.spec.ECParameterSpec;
+import org.bouncycastle.math.ec.ECCurve;
 
 
 public class JPakeECParam {
@@ -102,6 +104,52 @@ public static BigInteger getSHA256(ECPoint generator, ECPoint V, ECPoint X, Stri
     	return new BigInteger(result);
     }
 
+public static boolean verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, ECPoint V, BigInteger r, BigInteger q, String userID) {	
+    	/* ZKP: {V=G*v, r} */    	    	
+    	BigInteger h = getSHA256(generator, V, X, userID);
+        ECCurve.Fp ecCurve = (ECCurve.Fp)ecSpec.getCurve();
+    	BigInteger coFactor = ecSpec.getH();
+        BigInteger n = ecSpec.getN();
+    	// Public key validation based on p. 25
+    	// http://cs.ucsb.edu/~koc/ccs130h/notes/ecdsa-cert.pdf
+    	
+    	// 1. X != infinity
+    	if (X.isInfinity()){
+    		return false;
+    	}
+    	
+    	// 2. Check x and y coordinates are in Fq, i.e., x, y in [0, q-1]
+    	if (X.getXCoord().toBigInteger().compareTo(BigInteger.ZERO) == -1 ||
+    			X.getXCoord().toBigInteger().compareTo(q.subtract(BigInteger.ONE)) == 1 ||
+    			X.getYCoord().toBigInteger().compareTo(BigInteger.ZERO) == -1 ||
+    			X.getYCoord().toBigInteger().compareTo(q.subtract(BigInteger.ONE)) == 1) {
+    		return false;
+    	}
+    				
+    	// 3. Check X lies on the curve
+    	try {
+    		ecCurve.decodePoint(X.getEncoded(false));
+    	}
+    	catch(Exception e){
+    		e.printStackTrace();
+    		return false;
+    	}
+    	
+    	// 4. Check that nX = infinity.
+    	// It is equivalent - but more more efficient - to check the coFactor*X is not infinity
+    	if (X.multiply(coFactor).isInfinity()) { 
+    		return false;
+    	}
+    	
+    	// Now check if V = G*r + X*h. 
+    	// Given that {G, X} are valid points on curve, the equality implies that V is also a point on curve.
+    	if (V.equals(generator.multiply(r).add(X.multiply(h.mod(n))))) {
+    		return true;
+    	}
+    	else {
+    		return false;
+    	}
+    }
 
 
 

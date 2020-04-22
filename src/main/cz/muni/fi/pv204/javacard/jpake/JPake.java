@@ -1,9 +1,9 @@
 package cz.muni.fi.pv204.javacard.jpake;
 
-import org.bouncycastle.asn1.x9.ECNamedCurveTable;
+//import org.bouncycastle.asn1.x9.ECNamedCurveTable;
 import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.ECDomainParameters;
-
+import org.bouncycastle.jce.ECNamedCurveTable;
 
 import java.io.InvalidObjectException;
 import java.math.BigInteger;
@@ -143,8 +143,10 @@ public class JPake {
             byte[] participantId
     ) {
         try {
-            X9ECParameters curve = ECNamedCurveTable.getByName("P-256");
-            ECDomainParameters ecparams = new ECDomainParameters(curve.getCurve(), curve.getG(), curve.getN(), curve.getH(), curve.getSeed());
+            //X9ECParameters curve = ECNamedCurveTable.getByName("P-256");
+            ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("P-256");
+            ECCurve curve = ecSpec.getCurve();
+            ECDomainParameters ecparams = new ECDomainParameters(ecSpec.getCurve(), ecSpec.getG(), ecSpec.getN(), ecSpec.getH(), ecSpec.getSeed());
             // check if Gx1,Gx2 are infinity
 
             if (( JPakeECParam.byteArrayToECPoint(Gx1)).isInfinity() ||
@@ -156,11 +158,21 @@ public class JPake {
             ecparams.getCurve().decodePoint((JPakeECParam.byteArrayToECPoint(Gx2)).getEncoded(false));
 
             //beginning of checking the proof
-            ECPoint V = JPakeECParam.byteArrayToECPoint(knowledgeProofForX1V);
-            BigInteger r = knowledgeProofForX1r;
+            ECPoint V1 = JPakeECParam.byteArrayToECPoint(knowledgeProofForX1V);
+            BigInteger r1 = knowledgeProofForX1r;
             ECPoint Gx1Point = JPakeECParam.byteArrayToECPoint(Gx1);
-            BigInteger h = JPakeECParam.getSHA256(curve.getG(), V, Gx1Point, Arrays.toString(participantID));
-
+            
+            //BigInteger h = JPakeECParam.getSHA256(ecSpec.getG(), V, Gx1Point, Arrays.toString(participantID));
+            //verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, ECPoint V, BigInteger r, BigInteger q, String userID) {	
+            if (!JPakeECParam.verifyZKP(ecSpec, ecSpec.getG(), Gx1Point, V1, r1, ecSpec.getN(), Arrays.toString(participantID)) ) {
+                throw new Exception("The ZKP proof for x1 failed.");
+            }
+            ECPoint V2 = JPakeECParam.byteArrayToECPoint(knowledgeProofForX2V);
+            BigInteger r2 = knowledgeProofForX2r;
+            ECPoint Gx2Point = JPakeECParam.byteArrayToECPoint(Gx2);
+            if (!JPakeECParam.verifyZKP(ecSpec, ecSpec.getG(), Gx2Point, V2, r2, ecSpec.getN(), Arrays.toString(participantID)) ) {
+                throw new Exception("The ZKP proof for x1 failed.");
+            }
 
             }
         catch(Exception e)

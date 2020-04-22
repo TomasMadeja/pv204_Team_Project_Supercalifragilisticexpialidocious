@@ -1,6 +1,7 @@
 package cz.muni.fi.pv204.host;
 
 
+import cz.muni.fi.pv204.host.cardTools.Util;
 import org.apache.groovy.json.internal.ArrayUtils;
 import org.bouncycastle.crypto.CryptoException;
 import sun.security.util.ArrayUtil;
@@ -20,6 +21,27 @@ public class SecureChannel {
     private MagicAes aes;
     private SecureRandom rand;
     private Participant participant;
+
+    public static final int SIZE_ECPOINT = 65;
+    public static final byte SIZE_ECPOINT_BYTE = 0x41;
+    public static final int ID = 10;
+
+
+    public static final byte[] INS_R1_ID = Util.hexStringToByteArray("08110000" + "0A");
+    public static final byte[] INS_R1_GX = Util.hexStringToByteArray("08120000" + "C3");
+    public static final byte[] INS_R1_ZKP1 = Util.hexStringToByteArray("08130000");
+    public static final byte[] INS_R1_ZKP2 = Util.hexStringToByteArray("08140000");
+
+    public static final byte[] INS_R2_GX = Util.hexStringToByteArray("08110000");
+    public static final byte[] INS_R2_B = Util.hexStringToByteArray("08120000");
+    public static final byte[] INS_R2_ZKP1 = Util.hexStringToByteArray("08130000");
+    public static final byte[] INS_R2_ZKP2 = Util.hexStringToByteArray("08140000");
+    public static final byte[] INS_R2_ZKP5 = Util.hexStringToByteArray("08150000");
+
+    public static final byte[] INS_R3_A = Util.hexStringToByteArray("08310000");
+    public static final byte[] INS_R3_ZKP1 = Util.hexStringToByteArray("08320000");
+
+    public static final byte[] INS_HELLO = Util.hexStringToByteArray("08420000");
 
     public SecureChannel(
             JCardSymInterface channel,
@@ -63,58 +85,87 @@ public class SecureChannel {
         );
         byte[] participantIDA = round1.getParticipantId().getBytes();
 
-        short sizeOfGx = (short) Gx1.length;
-        short sizeOfZKP = (short) zkp1.length;
-        short sizeOfID = (short) participantIDA.length;
+//        short sizeOfGx = (short) Gx1.length;
+//        short sizeOfZKP = (short) zkp1.length;
+//        short sizeOfID = (short) participantIDA.length;
         // Obtained from generate round 1
 
         // TODO call round 1 generation
 
-        int outgoingLength = 2*sizeOfGx + 2*sizeOfZKP + sizeOfID;
         byte[] outgoing = new byte[
-                outgoingLength
+                participantIDA.length
                 ];
-        short outgoingOffset = 0;
+        short offset = 0;
+        byte[] len = new byte[1];
 
-        short offset = outgoingOffset; // Gx1
-        System.arraycopy(
-                Gx1, (short) 0,
-                outgoing, offset,
-                sizeOfGx
-        );
-        offset += sizeOfGx; // Gx2
-        System.arraycopy(
-                Gx2, (short) 0,
-                outgoing, offset,
-                sizeOfGx
-        );
-        offset += sizeOfGx; // ZKP x1
-        System.arraycopy(
-                zkp1, (short) 0,
-                outgoing, offset,
-                sizeOfZKP
-        );
-        offset += sizeOfZKP; // ZKP x2
-        System.arraycopy(
-                zkp2, (short) 0,
-                outgoing, offset,
-                sizeOfZKP
-        );
-        offset += sizeOfZKP; // ID
         System.arraycopy(
                 participantIDA, (short) 0,
                 outgoing, offset,
-                sizeOfID
+                participantIDA.length
         );
-        return channel.transmit(
-                new CommandAPDU(outgoing)
+        ResponseAPDU response = channel.transmit(
+                new CommandAPDU(combine(INS_R1_ID, outgoing))
         );
+        checkResponseAccept(response);
+
+        outgoing = new byte[Gx1.length + Gx2.length];
+        offset = 0;
+        System.arraycopy(
+                Gx1, (short) 0,
+                outgoing, offset,
+                Gx1.length
+        );
+        offset += Gx1.length; // Gx2
+        System.arraycopy(
+                Gx2, (short) 0,
+                outgoing, offset,
+                Gx2.length
+        );
+        response = channel.transmit(
+                new CommandAPDU(combine(INS_R1_GX, outgoing))
+        );
+        checkResponseAccept(response);
+
+        outgoing = new byte[zkp1.length];
+        offset = 0;
+        System.arraycopy(
+                zkp1, (short) 0,
+                outgoing, offset,
+                zkp1.length
+        );
+        len[0] = (byte) (
+                SIZE_ECPOINT_BYTE +
+                        getLSB(round1.getKnowledgeProofForX1().getr().toByteArray().length)
+        );
+        response = channel.transmit(
+                new CommandAPDU(combine(INS_R1_ZKP1, combine(len, outgoing)))
+        );
+        checkResponseAccept(response);
+
+
+        outgoing = new byte[zkp2.length];
+        offset = 0;
+        System.arraycopy(
+                zkp2, (short) 0,
+                outgoing, offset,
+                zkp2.length
+        );
+        len[0] = (byte) (
+                SIZE_ECPOINT_BYTE +
+                        getLSB(round1.getKnowledgeProofForX1().getr().toByteArray().length)
+        );
+        response = channel.transmit(
+                new CommandAPDU(combine(INS_R1_ZKP2, combine(len, outgoing)))
+        );
+        checkResponseAccept(response);
+
+        return response;
     }
 
     private ResponseAPDU establishmentRound3(
             ResponseAPDU response
     ) throws CardException, CryptoException {
-        short sizeOfGx = 1;
+        short sizeOfGx = 65;
         short sizeOfZKP = 1;
         short sizeOfAB = 1;
         short sizeOfID = 1;
@@ -128,9 +179,21 @@ public class SecureChannel {
         byte[] participantIDB = new byte[0];
 
         // Validation
-        byte[] incoming = response.getData();
+        byte[] incoming;
+        short offset;
 
-        short offset = 0;
+        incoming = response.getData();
+        offset = 0;
+        System.arraycopy(
+                incoming, offset,
+                participantIDB, (short) 0,
+                sizeOfID
+        );
+        response = channel.transmit(
+                new CommandAPDU(outgoing)
+        );
+        checkResponseAccept(response);
+
         System.arraycopy(
                 incoming, offset,
                 Gx3, (short) 0,
@@ -273,11 +336,31 @@ public class SecureChannel {
         }
     }
 
+    private void checkResponseAccept(ResponseAPDU response) {
+
+    }
+
+    private byte getLSB(int length) {
+        // only works n positive values
+        return (byte) (length & 0xff);
+    }
+
     private byte[] combine(byte[] a, byte[] b) {
         byte[] r = new byte[a.length + b.length];
         System.arraycopy(a, 0, r, 0, a.length);
         System.arraycopy(b, 0, r, a.length, b.length);
         return r;
+    }
+
+    private byte[] split(byte[] buffer, int offset, int length) {
+        byte[] r = new byte[length];
+        System.arraycopy(buffer, offset, r, 0, length);
+        return r;
+    }
+
+    private SchnorrZKP decodeZKP(byte[] buffer, short offset, short length) {
+
+        return new SchnorrZKP();
     }
 
 }

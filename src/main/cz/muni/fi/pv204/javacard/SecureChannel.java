@@ -14,10 +14,22 @@ public class SecureChannel {
 
     public static final short challengeLength = 32; // sha 256 - 128 for AES IV
 
-    public static final byte ROUND_1 = 0x01;
-    public static final byte ROUND_3 = 0x02;
-    public static final byte ROUND_HELLO = 0x03;
-    public static final byte ESTABLISHED = 0x04;
+    public static final byte ROUND_1_ID = 0x11;
+    public static final byte ROUND_1_GX = 0x12;
+    public static final byte ROUND_1_ZKP1 = 0x13;
+    public static final byte ROUND_1_ZKP3 = 0x14;
+
+    public static final byte ROUND_2_GX = 0x21;
+    public static final byte ROUND_2_B = 0x22;
+    public static final byte ROUND_2_ZKP1 = 0x23;
+    public static final byte ROUND_2_ZKP3 = 0x24;
+    public static final byte ROUND_2_ZKP4 = 0x25;
+
+    public static final byte ROUND_3_A = 0x31;
+    public static final byte ROUND_3_ZKP1 = 0x32;
+
+    public static final byte ROUND_HELLO = 0x41;
+    public static final byte ESTABLISHED = 0x42;
 
     private static SecureChannel sc = null;
     private static JPakePassword pin = null;

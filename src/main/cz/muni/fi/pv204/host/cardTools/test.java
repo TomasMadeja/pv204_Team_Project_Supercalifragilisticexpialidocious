@@ -1,5 +1,5 @@
 package cz.muni.fi.pv204.host.cardTools;
-
+/*
 import javacard.framework.APDU;
 import javacard.framework.Applet;
 import javacard.framework.ISO7816;
@@ -93,3 +93,4 @@ public class test {
 
     }
 }
+*/

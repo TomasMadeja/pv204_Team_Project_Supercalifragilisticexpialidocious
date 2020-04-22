@@ -2,9 +2,9 @@ package cz.muni.fi.pv204.host;
 
 
 import cz.muni.fi.pv204.host.cardTools.Util;
-import org.apache.groovy.json.internal.ArrayUtils;
+//import org.apache.groovy.json.internal.ArrayUtils;
 import org.bouncycastle.crypto.CryptoException;
-import sun.security.util.ArrayUtil;
+//import sun.security.util.ArrayUtil;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;

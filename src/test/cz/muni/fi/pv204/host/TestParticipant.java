@@ -1,9 +1,11 @@
 package cz.muni.fi.pv204.host;
 
-import org.bouncycastle.jce.ECNamedCurveTable;
+//import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.math.ec.ECPoint;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
+
+
 
 
 public class TestParticipant {

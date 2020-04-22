@@ -7,7 +7,7 @@ import javacard.framework.*;
 import cz.muni.fi.pv204.javacard.crypto.NIZKP;
 import cz.muni.fi.pv204.javacard.jpake.JPakePassword;
 import javacard.security.RandomData;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+//import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.math.BigInteger;
 

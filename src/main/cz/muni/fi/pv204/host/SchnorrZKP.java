@@ -12,6 +12,7 @@ import java.security.SecureRandom;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.math.ec.ECCurve;
+import org.bouncycastle.math.ec.custom.sec.SecP256R1Curve;
 
 //import cz.muni.fi.pv204.host.Util;
 
@@ -62,7 +63,7 @@ public class SchnorrZKP {
     public boolean verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, BigInteger q, String userID) {	
     	/* ZKP: {V=G*v, r} */    	    	
     	BigInteger h = Util.getSHA256(generator, V, X, userID);
-        ECCurve.Fp ecCurve = (ECCurve.Fp)ecSpec.getCurve();
+		SecP256R1Curve ecCurve = (SecP256R1Curve) ecSpec.getCurve();
     	BigInteger coFactor = ecSpec.getH();
         BigInteger n = ecSpec.getN();
     	// Public key validation based on p. 25
@@ -98,7 +99,7 @@ public class SchnorrZKP {
     	
     	// Now check if V = G*r + X*h. 
     	// Given that {G, X} are valid points on curve, the equality implies that V is also a point on curve.
-    	if (V.equals(generator.multiply(r).add(X.multiply(h.mod(n))))) {
+    	if (V.equals(generator.multiply(r).add(X.multiply(h)))) {
     		return true;
     	}
     	else {

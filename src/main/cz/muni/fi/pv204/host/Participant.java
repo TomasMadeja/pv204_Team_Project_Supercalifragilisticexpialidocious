@@ -22,6 +22,7 @@ import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.math.ec.ECCurve;
+import org.bouncycastle.math.ec.custom.sec.SecP256R1Curve;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.math.ec.ECPoint;
 
@@ -84,9 +85,9 @@ public class Participant
     public static final int STATE_ROUND_1_VALIDATED = 20;
     public static final int STATE_ROUND_2_CREATED = 30;
     public static final int STATE_ROUND_2_VALIDATED = 40;
-    public static final int STATE_KEY_CALCULATED = 50;
     public static final int STATE_ROUND_3_CREATED = 60;
     public static final int STATE_ROUND_3_VALIDATED = 70;
+    public static final int STATE_KEY_CALCULATED = 80;
 
     /**
      * Unique identifier of this participant.
@@ -116,7 +117,7 @@ public class Participant
     private final SecureRandom random;
     
     public final ECParameterSpec ecSpec;
-    public final ECCurve.Fp ecCurve;
+    public final SecP256R1Curve ecCurve;
     private final BigInteger q;
     private final BigInteger coFactor; // Not using the symbol "h" here to avoid confusion as h will be used later in SchnorrZKP. 
     private final BigInteger n;
@@ -263,7 +264,7 @@ public class Participant
          */
         this.password = Arrays.copyOf(password, password.length);
         this.ecSpec = ecSpec;
-        this.ecCurve = (ECCurve.Fp)ecSpec.getCurve();  //TODO group.getP(); come up with a compatible solution with the guys
+        this.ecCurve = (SecP256R1Curve) ecSpec.getCurve();  //TODO group.getP(); come up with a compatible solution with the guys
         this.q = ecCurve.getQ();
         this.G = ecSpec.getG();
         this.coFactor = ecSpec.getH();
@@ -300,8 +301,8 @@ public class Participant
         this.x1 = Util.generateX1(q, random);
         this.x2 = Util.generateX2(q, random);
 
-        this.Gx1 = Util.calculateGx(ecCurve, G, x1);
-        this.Gx2 = Util.calculateGx(ecCurve, G, x2);
+        this.Gx1 = Util.calculateGx(G, x1);
+        this.Gx2 = Util.calculateGx(G, x2);
         SchnorrZKP knowledgeProofForX1 = new SchnorrZKP();
         knowledgeProofForX1.generateZKP(G, n, x1, Gx1, participantId);  //TODO n
         SchnorrZKP knowledgeProofForX2 = new SchnorrZKP();
@@ -373,19 +374,19 @@ public class Participant
         this.x1 = Util.generateX1(q, random);
         this.x2 = Util.generateX2(q, random);
 
-        this.Gx1 = Util.calculateGx(ecCurve, G, x1);
-        this.Gx2 = Util.calculateGx(ecCurve, G, x2);
+        this.Gx1 = Util.calculateGx(G, x1);
+        this.Gx2 = Util.calculateGx(G, x2);
         SchnorrZKP knowledgeProofForX3 = new SchnorrZKP();
         knowledgeProofForX3.generateZKP(G, n, x1, Gx1, participantId);  //TODO n
         SchnorrZKP knowledgeProofForX4 = new SchnorrZKP();
         knowledgeProofForX4.generateZKP(G, n, x2, Gx2, participantId);
         
         //Bob's this.Gx3  is the actual Gx1 etc.
-        ECPoint GB = Util.calculateGA(ecCurve, Gx3, Gx4, Gx1);
+        ECPoint GB = Util.calculateGA(Gx3, Gx4, Gx1);
         BigInteger s = Util.calculateS(password);
         //Bob's  this.x2 is the actual x4 etc.
         BigInteger x4s = Util.calculateX2s(q, x2, s);
-        ECPoint B = Util.calculateA(ecCurve, q, GB, x4s);
+        ECPoint B = Util.calculateA(q, GB, x4s);
         SchnorrZKP knowledgeProofForX4s = new SchnorrZKP();
         knowledgeProofForX4s.generateZKP(GB, n, x4s, B, participantId); //TODO n
         //zkpX2s.generateZKP(GA, n, x2.multiply(s1).mod(n), A, AliceID);
@@ -424,10 +425,10 @@ public class Participant
         {
             throw new IllegalStateException("Validation already attempted for round2 payload for" + participantId);
         }
-        ECPoint Gb = Util.calculateGA(ecCurve, Gx3, Gx1, Gx2);
         this.B = round2PayloadReceived.getB();
         this.Gx3 = round2PayloadReceived.getGx3();
         this.Gx4 = round2PayloadReceived.getGx4();
+        ECPoint Gb = Util.calculateGA(Gx3, Gx1, Gx2);
         
         SchnorrZKP knowledgeProofForX4s = round2PayloadReceived.getKnowledgeProofForX4s();
         SchnorrZKP knowledgeProofForX3 = round2PayloadReceived.getKnowledgeProofForX3();
@@ -435,15 +436,14 @@ public class Participant
         
         //these throw exceptions
         Util.validateParticipantIdsDiffer(participantId, round2PayloadReceived.getParticipantId());
-        Util.validateParticipantIdsEqual(this.partnerParticipantId, round2PayloadReceived.getParticipantId());
         Util.validateGa(Gb);
         //Util.validateZeroKnowledgeProof(p, q, gB, b, knowledgeProofForX4s, round2PayloadReceived.getParticipantId(), digest);
         
         //
         if (
-        !knowledgeProofForX4s.verifyZKP(ecSpec, Gb, G, q, participantId) ||
-        !knowledgeProofForX3.verifyZKP(ecSpec, Gx3, G, q, participantId) ||
-        !knowledgeProofForX4.verifyZKP(ecSpec, Gx4, G, q, participantId) ){
+        !knowledgeProofForX4s.verifyZKP(ecSpec, Gb, B, q, round2PayloadReceived.getParticipantId()) ||
+        !knowledgeProofForX3.verifyZKP(ecSpec, G, Gx3, q, round2PayloadReceived.getParticipantId()) ||
+        !knowledgeProofForX4.verifyZKP(ecSpec, G, Gx4, q, round2PayloadReceived.getParticipantId()) ){
         
             throw new CryptoException("Zero knowledge proofs of the 2nd pass (from Bob) carried out by Alice failed");
         }
@@ -453,10 +453,78 @@ public class Participant
         
     }
 
+
+    /**
+     * Creates and returns the payload to send to the other participant during the 3rd pass.
+     * This is made by Alice
+     * After execution, the {@link #getState() state} will be  {@link #STATE_ROUND_3_CREATED}.
+     *
+     * @return The payload sent by Alice during the 3rd pass of J-PAKE.
+     * @throws IllegalStateException if called prior to {@link #calculateKeyingMaterial()}, or multiple times
+     */
+    public Round3Payload createRound3PayloadToSend()
+    {
+        if (this.state >= STATE_ROUND_3_CREATED)
+        {
+            throw new IllegalStateException("Round3 payload already created for " + this.participantId);
+        }
+        //if (this.state < STATE_KEY_CALCULATED)
+        //{
+        //    throw new IllegalStateException("Keying material must be calculated prior to creating Round3 payload for " + this.participantId);
+        //}
+
+        ECPoint GA = Util.calculateGA(Gx1, Gx3, Gx4);
+        BigInteger s = Util.calculateS(password);
+        BigInteger x2s = Util.calculateX2s(q, x2, s);
+        ECPoint A = Util.calculateA(q, GA, x2s);
+        SchnorrZKP knowledgeProofForX2s = new SchnorrZKP();
+        knowledgeProofForX2s.generateZKP(GA, n, x2s, B, participantId);
+        return new Round3Payload(participantId, A, knowledgeProofForX2s);
+    }
+
+    /**
+     * Validates the payload received from the "Alice" participant during the 3rd pass.
+     * This is carried out from bob's point of view
+     * <p>
+     * See {@link JPAKEParticipant} for more details on round 3.
+     * <p>
+     * After execution, the {@link #getState() state} will be {@link #STATE_ROUND_3_VALIDATED}.
+     *
+     * @param round3PayloadReceived The round 3 payload received from the other participant.
+     * @throws CryptoException if validation fails.
+     * @throws IllegalStateException if called prior to {@link #calculateKeyingMaterial()}, or multiple times
+     */
+    public void validateRound3PayloadReceived(Round3Payload round3PayloadReceived)
+        throws CryptoException
+    {   //These might be redundant
+        if (this.state >= STATE_ROUND_3_VALIDATED)
+        {
+            throw new IllegalStateException("Validation already attempted for round3 payload for" + participantId);
+        }
+        Util.validateParticipantIdsDiffer(participantId, round3PayloadReceived.getParticipantId());
+        Util.validateParticipantIdsEqual(this.partnerParticipantId, round3PayloadReceived.getParticipantId());
+        
+        
+        ECPoint A = round3PayloadReceived.getA();
+        Util.validateGa(A); //nevím, co se tu má testovat
+        
+        ECPoint Ga = Util.calculateGA(Gx3, Gx1, Gx2);
+        Util.validateGa(A);
+        SchnorrZKP knowledgeProofForX2s =round3PayloadReceived.getKnowledgeProofForX2s();
+        if (knowledgeProofForX2s.verifyZKP(ecSpec, G, Ga, q, participantId)){
+            throw new CryptoException("Zero knowledge proofs of the 3nd pass (from Alice) carried out by Bob failed");
+        }
+        /*
+         * Clear the rest of the fields.
+         */
+        this.B = A;
+        this.state = STATE_ROUND_3_VALIDATED;
+    }
+
     /**
      * Calculates and returns the key material.
      * From the point of view od Alice
-     * 
+     *
      * A session key must be derived from this key material using a secure key derivation function (KDF).
      * The KDF used to derive the key is handled externally (i.e. not by {@link JPAKEParticipant}).
      * <p>
@@ -491,29 +559,29 @@ public class Participant
             throw new IllegalStateException("Round2 payload must be validated prior to creating key for " + participantId);
         }
         BigInteger s = Util.calculateS(password);
-        
+
         /*
          * Clear the password array from memory, since we don't need it anymore.
-         * 
+         *
          * Also set the field to null as a flag to indicate that the key has already been calculated.
          */
         Arrays.fill(password, (char)0);
         this.password = null;
 
         ECPoint keyingMaterial = Util.calculateKeyingMaterial(Gx4, x2, s, B);
-        
+
         /*
          * Clear the ephemeral private key fields as well.
          * Note that we're relying on the garbage collector to do its job to clean these up.
          * The old objects will hang around in memory until the garbage collector destroys them.
-         * 
+         *
          * If the ephemeral private keys x1 and x2 are leaked,
          * the attacker might be able to brute-force the password.
          */
         this.x1 = null;
         this.x2 = null;
         this.B = null;
-        
+
         /*
          * Do not clear gx* yet, since those are needed by round 3.
          */
@@ -521,78 +589,6 @@ public class Participant
         this.state = STATE_KEY_CALCULATED;
 
         return keyingMaterial;
-    }
-
-
-    /**
-     * Creates and returns the payload to send to the other participant during the 3rd pass.
-     * This is made by Alice
-     * After execution, the {@link #getState() state} will be  {@link #STATE_ROUND_3_CREATED}.
-     *
-     * @return The payload sent by Alice during the 3rd pass of J-PAKE.
-     * @throws IllegalStateException if called prior to {@link #calculateKeyingMaterial()}, or multiple times
-     */
-    public Round3Payload createRound3PayloadToSend()
-    {
-        if (this.state >= STATE_ROUND_3_CREATED)
-        {
-            throw new IllegalStateException("Round3 payload already created for " + this.participantId);
-        }
-        //if (this.state < STATE_KEY_CALCULATED)
-        //{
-        //    throw new IllegalStateException("Keying material must be calculated prior to creating Round3 payload for " + this.participantId);
-        //}
-
-        ECPoint GA = Util.calculateGA(ecCurve, Gx1, Gx3, Gx4);
-        BigInteger s = Util.calculateS(password);
-        BigInteger x2s = Util.calculateX2s(q, x2, s);
-        ECPoint A = Util.calculateA(ecCurve, q, GA, x2s);
-        SchnorrZKP knowledgeProofForX2s = new SchnorrZKP();
-        knowledgeProofForX2s.generateZKP(GA, n, x2s, B, participantId);
-        return new Round3Payload(participantId, A, knowledgeProofForX2s);
-    }
-
-    /**
-     * Validates the payload received from the "Alice" participant during the 3rd pass.
-     * This is carried out from bob's point of view
-     * <p>
-     * See {@link JPAKEParticipant} for more details on round 3.
-     * <p>
-     * After execution, the {@link #getState() state} will be {@link #STATE_ROUND_3_VALIDATED}.
-     *
-     * @param round3PayloadReceived The round 3 payload received from the other participant.
-     * @throws CryptoException if validation fails.
-     * @throws IllegalStateException if called prior to {@link #calculateKeyingMaterial()}, or multiple times
-     */
-    public void validateRound3PayloadReceived(Round3Payload round3PayloadReceived)
-        throws CryptoException
-    {   //These might be redundant
-        if (this.state >= STATE_ROUND_3_VALIDATED)
-        {
-            throw new IllegalStateException("Validation already attempted for round3 payload for" + participantId);
-        }
-        Util.validateParticipantIdsDiffer(participantId, round3PayloadReceived.getParticipantId());
-        Util.validateParticipantIdsEqual(this.partnerParticipantId, round3PayloadReceived.getParticipantId());
-        
-        
-        ECPoint A = round3PayloadReceived.getA();
-        Util.validateGa(A); //nevím, co se tu má testovat
-        
-        ECPoint Ga = Util.calculateGA(ecCurve, Gx3, Gx1, Gx2);
-        Util.validateGa(A);
-        SchnorrZKP knowledgeProofForX2s =round3PayloadReceived.getKnowledgeProofForX2s();
-        if (knowledgeProofForX2s.verifyZKP(ecSpec, G, Ga, q, participantId)){
-            throw new CryptoException("Zero knowledge proofs of the 3nd pass (from Alice) carried out by Bob failed");
-        }
-        /*
-         * Clear the rest of the fields.
-         */
-        this.Gx1 = null;
-        this.Gx2 = null;
-        this.Gx3 = null;
-        this.Gx4 = null;
-
-        this.state = STATE_ROUND_3_VALIDATED;
     }
 
 }

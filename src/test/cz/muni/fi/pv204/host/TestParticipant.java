@@ -30,4 +30,30 @@ public class TestParticipant {
         ECPoint k2 = p2.calculateKeyingMaterial();
         Assertions.assertEquals(k1, k2);
     }
+
+    @Test
+    public void wrongPassword() throws Exception {
+//        ECNamedCurveTable.getNames().
+//        System.out.println(ECNamedCurveTable.getNames());
+        char[] pin = {'0','1','2','3'};
+        char[] pin2 = {'1','2','3','4'};
+        Participant p1 = new Participant(
+                "1",
+                pin
+        );
+        Participant p2 = new Participant(
+                "2",
+                pin2
+        );
+        p2.validateRound1PayloadReceived(p1.createRound1PayloadToSend());
+        p1.validateRound2PayloadReceived(p2.createRound2PayloadToSend());
+        p2.validateRound3PayloadReceived(p1.createRound3PayloadToSend());
+
+        ECPoint k1 = p1.calculateKeyingMaterial();
+        ECPoint k2 = p2.calculateKeyingMaterial();
+        Assertions.assertFalse(k1.equals(k2));
+    }
+
+
+
 }

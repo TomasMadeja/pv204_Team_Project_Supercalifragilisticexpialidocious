@@ -198,15 +198,6 @@ public class JPake {
             ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec("P-256");
             ECCurve curve = ecSpec.getCurve();
             ECDomainParameters ecparams = new ECDomainParameters(ecSpec.getCurve(), ecSpec.getG(), ecSpec.getN(), ecSpec.getH(), ecSpec.getSeed());
-            // check if Gx1,Gx2 are infinity
-
-            if ((JPakeECParam.byteArrayToECPoint(Gx1)).isInfinity() ||
-                    (JPakeECParam.byteArrayToECPoint(Gx2)).isInfinity())
-                throw new Exception("infnity point ");
-
-            // check if points are valid for the given curve
-            ecparams.getCurve().decodePoint((JPakeECParam.byteArrayToECPoint(Gx1)).getEncoded(false));
-            ecparams.getCurve().decodePoint((JPakeECParam.byteArrayToECPoint(Gx2)).getEncoded(false));
 
             //beginning of checking the proof
             ECPoint V1 = JPakeECParam.byteArrayToECPoint(knowledgeProofForX1V);

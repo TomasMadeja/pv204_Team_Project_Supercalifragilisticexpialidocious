@@ -74,7 +74,6 @@ public class Util
      * TODO make this EC
      */
     public static ECPoint calculateGx(
-        ECCurve.Fp ecCurve,
         ECPoint G,
         BigInteger x)
     {
@@ -86,7 +85,6 @@ public class Util
      * TODO make this EC
      */
     public static ECPoint calculateGA(
-        ECCurve.Fp ecCurve,
         ECPoint Gx1,
         ECPoint Gx3,
         ECPoint Gx4)
@@ -114,7 +112,6 @@ public class Util
      * Calculate A as done in round 2.
      */
     public static ECPoint calculateA(
-        ECCurve.Fp ecCurve,
         BigInteger q,
         ECPoint GA,
         BigInteger x2s)

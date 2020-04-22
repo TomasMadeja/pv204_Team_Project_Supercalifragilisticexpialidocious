@@ -2,12 +2,11 @@ package cz.muni.fi.pv204.javacard;
 
 import cz.muni.fi.pv204.javacard.crypto.MagicAes;
 import cz.muni.fi.pv204.javacard.jpake.JPake;
+import cz.muni.fi.pv204.javacard.jpake.JPakeECParam;
 import javacard.framework.*;
 
-import cz.muni.fi.pv204.javacard.crypto.NIZKP;
 import cz.muni.fi.pv204.javacard.jpake.JPakePassword;
 import javacard.security.RandomData;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.math.BigInteger;
 
@@ -17,7 +16,7 @@ public class SecureChannel {
     public static final short PIN_SIZE = 4;
     public static final short PIN_TRIES = 3;
 
-    public static final short challengeLength = 32; // sha 256 - 128 for AES IV
+    public static final short SIZE_CHALLENGE = 32; // sha 256 - 128 for AES IV
     public static final short SIZE_ID = 10;
     public static final short SIZE_EC_POINT = 65;
 
@@ -59,10 +58,7 @@ public class SecureChannel {
     private BigInteger zkp2_r;
     private byte[] zkp3_v;
     private BigInteger zkp3_r;
-    private byte[] zkp2;
-    private byte[] zkp3;
     private byte[] participantIDA;
-    private byte[] participantIDB;
     private byte[] challenge;
 
     public static class UnexpectedError extends Exception {
@@ -72,9 +68,28 @@ public class SecureChannel {
     }
 
     private SecureChannel() {
-//        throw new NotImplementedException();
         rand = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
         state = JCSystem.makeTransientByteArray((short) 1, JCSystem.CLEAR_ON_DESELECT);
+        state[0] = 0x00;
+        pin = new JPakePassword((byte) PIN_TRIES , (byte) PIN_SIZE);
+        JPakeECParam param = new JPakeECParam();
+        myID = new byte[SIZE_ID];
+        rand.nextBytes(myID, (short) 0, SIZE_ID);
+        jpake = new JPake(myID, pin, param);
+        aes = new MagicAes();
+
+        Gx1 = new byte[SIZE_EC_POINT];
+        Gx2 = new byte[SIZE_EC_POINT];
+        Gx3 = new byte[SIZE_EC_POINT];
+        Gx4 = new byte[SIZE_EC_POINT];
+        A = new byte[SIZE_EC_POINT];
+        B = new byte[SIZE_EC_POINT];
+        zkp1_v = new byte[SIZE_EC_POINT];
+        zkp2_v = new byte[SIZE_EC_POINT];
+        zkp3_v = new byte[SIZE_EC_POINT];
+        participantIDA = new byte[SIZE_ID];
+        challenge = new byte[SIZE_CHALLENGE];
+
     }
 
     public static SecureChannel getSecureChannel() {
@@ -170,14 +185,12 @@ public class SecureChannel {
                 size = encodeZKP(outBuffer, outOffset, outLen, zkp2_v, zkp2_r);
                 state[0] = ROUND_2_ZKP3;
                 sendSuccess(apdu, outOffset, size);
-                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_2_ZKP3:
                 checkState(command);
                 size = encodeZKP(outBuffer, outOffset, outLen, zkp3_v, zkp3_r);
                 state[0] = ROUND_3_A;
                 sendSuccess(apdu, outOffset, size);
-                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
             case ROUND_3_A:
                 checkLength(inLen, SIZE_EC_POINT, SIZE_EC_POINT);
@@ -193,7 +206,7 @@ public class SecureChannel {
                 validateRound3();
                 prepareForHello(outBuffer, outOffset, outLen);
                 state[0] = ROUND_HELLO;
-                sendSuccess(apdu, outOffset, (short) (challengeLength));
+                sendSuccess(apdu, outOffset, (short) (SIZE_CHALLENGE));
                 break;
             case ROUND_HELLO:
                 checkLength(inLen, (short) 32, (short) 32);
@@ -207,9 +220,9 @@ public class SecureChannel {
                         outBuffer, outOffset, outLen
                 );
                 state[0] = ESTABLISHED;
-                unCheckedWrap(outBuffer, outOffset, (short)(2*challengeLength), outBuffer, outOffset, outLen);
+                unCheckedWrap(outBuffer, outOffset, (short)(2* SIZE_CHALLENGE), outBuffer, outOffset, outLen);
                 pin.correct();
-                sendSuccess(apdu, outOffset, (short) (2*challengeLength));
+                sendSuccess(apdu, outOffset, (short) (2* SIZE_CHALLENGE));
                 break;
             default:
                 checkState(ESTABLISHED);
@@ -300,7 +313,7 @@ public class SecureChannel {
             byte[] outgoing, short outgoingOffset, short outgoingLength
     ) {
         Util.arrayCopy(
-                participantIDB, (short) 0,
+                myID, (short) 0,
                 outgoing, outgoingOffset,
                 SIZE_ID
         );
@@ -414,7 +427,7 @@ public class SecureChannel {
                 zkp1_v, zkp1_r,
                 zkp2_v, zkp2_r,
                 zkp3_v, zkp3_r,
-                participantIDB
+                myID
         );
         zkp1_r = r[0];
         zkp2_r = r[1];
@@ -435,10 +448,10 @@ public class SecureChannel {
     private short prepareForHello(
             byte[] outgoing, short outgoingOffset, short outgoingLength
     ) throws UnexpectedError {
-        if (outgoingLength < challengeLength) {
+        if (outgoingLength < SIZE_CHALLENGE) {
             throw new UnexpectedError(); // TODO
         }
-        rand.nextBytes(challenge, (short) 0, challengeLength);
+        rand.nextBytes(challenge, (short) 0, SIZE_CHALLENGE);
         aes.generateKey(
                 jpake.calculateKeyingMaterial(),
                 challenge
@@ -447,27 +460,27 @@ public class SecureChannel {
         Util.arrayCopy(
                 challenge, (short) 0,
                 outgoing, outgoingOffset,
-                challengeLength
+                SIZE_CHALLENGE
         );
-        return challengeLength;
+        return SIZE_CHALLENGE;
     }
 
     private void establishmentHello(
             byte[] incoming, short incomingOffset, short incomingLength,
             byte[] outgoing, short outgoingOffset, short outgoingLength
     ) {
-        for (short i = 0; i < challengeLength; i++) {
-            if ( incoming[incomingOffset+challengeLength+i] != (byte) (
+        for (short i = 0; i < SIZE_CHALLENGE; i++) {
+            if ( incoming[incomingOffset+ SIZE_CHALLENGE +i] != (byte) (
                     challenge[i] ^ incoming[incomingOffset+i]
             ) ) {
                 state[0] = 0x00;
                 ISOException.throwIt(ISO7816.SW_DATA_INVALID); // TODO throw something
             }
         }
-        rand.nextBytes(outgoing, challengeLength, challengeLength);
-        for (short i = 0; i < challengeLength; i++) {
+        rand.nextBytes(outgoing, SIZE_CHALLENGE, SIZE_CHALLENGE);
+        for (short i = 0; i < SIZE_CHALLENGE; i++) {
             outgoing[outgoingOffset + i] =  (byte) (
-                    challenge[i] ^ outgoing[outgoingOffset + challengeLength + i]
+                    challenge[i] ^ outgoing[outgoingOffset + SIZE_CHALLENGE + i]
             );
         }
     }

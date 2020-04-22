@@ -64,9 +64,9 @@ public class Util
      * Converts the given password to a {@link BigInteger}
      * for use in arithmetic calculations.
      */
-    public static BigInteger calculateS(char[] password)
+    public static BigInteger calculateS(byte[] password)
     {
-        return new BigInteger(Strings.toUTF8ByteArray(password));
+        return new BigInteger(password);
     }
     
     /**

@@ -12,14 +12,14 @@ public class TestParticipant {
     public void simpleConversation() throws Exception {
 //        ECNamedCurveTable.getNames().
 //        System.out.println(ECNamedCurveTable.getNames());
-        char[] pin = {'0','1','2','3'};
-        char[] pin2 = {'0','1','2','3'};
+        byte[] pin = {0x00,0x01,0x02,0x03};
+        byte[] pin2 = {0x00,0x01,0x02,0x03};
         Participant p1 = new Participant(
-                "1",
+                "1234567890",
                 pin
         );
         Participant p2 = new Participant(
-                "2",
+                "1234567891",
                 pin2
         );
         p2.validateRound1PayloadReceived(p1.createRound1PayloadToSend());

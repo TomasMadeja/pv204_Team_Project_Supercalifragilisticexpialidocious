@@ -103,7 +103,7 @@ public class Participant
      * and the field is set to null.
      * </p>
      */
-    private char[] password = {'1', '2', '3', '4'};
+    private byte[] password;
 
     /**
      * Digest to use during calculations.
@@ -178,7 +178,7 @@ public class Participant
      */
     public Participant(
         String participantId,
-        char[] password)
+        byte[] password)
     {
         this(
             participantId,
@@ -202,7 +202,7 @@ public class Participant
      */
     public Participant(
         String participantId,
-        char[] password,
+        byte[] password,
         ECParameterSpec ecSpec)
     {
         this(
@@ -233,7 +233,7 @@ public class Participant
      */
     public Participant(
         String participantId,
-        char[] password,
+        byte[] password,
         ECParameterSpec ecSpec,
         Digest digest,
         SecureRandom random)
@@ -262,7 +262,7 @@ public class Participant
          * The caller is responsible for clearing the original password array
          * given as input to this constructor.
          */
-        this.password = Arrays.copyOf(password, password.length);
+        this.password = password;
         this.ecSpec = ecSpec;
         this.ecCurve = (SecP256R1Curve) ecSpec.getCurve();  //TODO group.getP(); come up with a compatible solution with the guys
         this.q = ecCurve.getQ();
@@ -565,8 +565,6 @@ public class Participant
          *
          * Also set the field to null as a flag to indicate that the key has already been calculated.
          */
-        Arrays.fill(password, (char)0);
-        this.password = null;
 
         ECPoint keyingMaterial = Util.calculateKeyingMaterial(Gx4, x2, s, B);
 
@@ -578,9 +576,6 @@ public class Participant
          * If the ephemeral private keys x1 and x2 are leaked,
          * the attacker might be able to brute-force the password.
          */
-        this.x1 = null;
-        this.x2 = null;
-        this.B = null;
 
         /*
          * Do not clear gx* yet, since those are needed by round 3.
@@ -589,6 +584,20 @@ public class Participant
         this.state = STATE_KEY_CALCULATED;
 
         return keyingMaterial;
+    }
+
+    public void clear() {
+        for (int i = 0; i < password.length; i++) {
+            password[i] = 0x00;
+        }
+        this.x1 = null;
+        this.x2 = null;
+        this.B = null;
+        this.Gx1 = null;
+        this.Gx2 = null;
+        this.Gx3 = null;
+        this.Gx4 = null;
+        this.password = null;
     }
 
 }

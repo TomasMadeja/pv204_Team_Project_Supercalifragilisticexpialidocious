@@ -43,6 +43,7 @@ public class SCApplet extends Applet {
     }
 
     public void process(APDU apdu) {
+        apdu.setIncomingAndReceive();
         byte[] buffer = apdu.getBuffer();
         short length;
 

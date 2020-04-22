@@ -86,16 +86,19 @@ public class SecureChannel {
             String participantId,
             char[] password
     ) throws Exception {
+        if (participantId.length() != SIZE_ID) throw new Exception();
         if (password.length != PASS_LEN) throw new Exception();
-        for (char c : password) {
-            if (! Character.isDigit(c)) throw new Exception();
+        byte[] p = new byte[PASS_LEN];
+        for (int i=0; i < PASS_LEN; i++) {
+            if (! Character.isDigit(password[i])) throw new Exception();
+            p[i] = (byte) (password[i] - '0');
         }
 
         this.channel = channel;
 
         rand = SecureRandom.getInstanceStrong();
         aes = new MagicAes();
-        participant = new Participant(participantId, password);
+        participant = new Participant(participantId, p);
     }
 
     public void establishSC() throws CardException, ErrorResponseException,
@@ -108,6 +111,7 @@ public class SecureChannel {
         validationRound2(r);
         r = establishmentRound3();
         establishmentHello(r);
+        participant.clear();
     }
 
     public void wrap() { }
@@ -365,7 +369,7 @@ public class SecureChannel {
     }
 
     private void checkResponseAccept(ResponseAPDU response) throws ErrorResponseException {
-        if ((short) response.getSW() == SW_NO_ERROR ) {
+        if ((short) response.getSW() != SW_NO_ERROR ) {
             throw new ErrorResponseException((short) response.getSW());
         }
     }

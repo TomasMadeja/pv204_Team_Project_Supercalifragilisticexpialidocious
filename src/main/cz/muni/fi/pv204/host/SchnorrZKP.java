@@ -27,6 +27,11 @@ public class SchnorrZKP {
     	public SchnorrZKP () {
     		// constructor
     	}
+
+		public SchnorrZKP (ECPoint V, BigInteger r) {
+			this.V = V;
+			this.r = r;
+		}
     	
     	public void generateZKP (ECPoint generator, BigInteger n, BigInteger x, ECPoint X, String userID) {
 

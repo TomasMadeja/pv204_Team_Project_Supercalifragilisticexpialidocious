@@ -19,7 +19,7 @@ public class SecureChannel {
     public static final byte ROUND_1_ZKP1 = 0x13;
     public static final byte ROUND_1_ZKP2 = 0x14;
 
-//    public static final byte ROUND_2_GX = 0x21; // This state should not be needed
+    public static final byte ROUND_2_GX = 0x21;
     public static final byte ROUND_2_B = 0x22;
     public static final byte ROUND_2_ZKP1 = 0x23;
     public static final byte ROUND_2_ZKP2 = 0x24;
@@ -110,7 +110,13 @@ public class SecureChannel {
                 // TODO throw something
                 if (state[0] != command) throw new NotImplementedException();
                 // TODO do something
-                state[0] = ROUND_2_B; // response to round 1 ZKP2 should contain round 2 GX-es
+                state[0] = ROUND_2_GX; // Response should contain participant ID
+                break;
+            case ROUND_2_GX:
+                // TODO throw something
+                if (state[0] != command) throw new NotImplementedException();
+                // TODO do something
+                state[0] = ROUND_2_B;
                 break;
             case ROUND_2_B:
                 // TODO throw something

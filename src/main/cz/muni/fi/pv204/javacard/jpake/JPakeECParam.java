@@ -8,6 +8,7 @@ import org.bouncycastle.crypto.digests.SHA256Digest;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.security.SecureRandom;
 import javacard.security.MessageDigest;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.math.ec.ECCurve;
@@ -154,4 +155,11 @@ public static boolean verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoi
 
 
 
+
+
+public static BigInteger generateZKPr(ECPoint generator, BigInteger n, BigInteger x, ECPoint X, ECPoint V, BigInteger v, String userID){
+    BigInteger h = getSHA256(generator, V, X, userID);
+    BigInteger r = v.subtract(x.multiply(h)).mod(n); 
+    return r;
+}
 }

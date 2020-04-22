@@ -81,8 +81,8 @@ public class JPake {
     private ECPoint knowledgeProofForX4V;
 
 
-    private byte[] knowledgeProofForX2sr;
-    private byte[] knowledgeProofForX4sr;
+    private BigInteger knowledgeProofForX2sr;
+    private BigInteger knowledgeProofForX4sr;
     private ECPoint knowledgeProofForX2sV;
     private ECPoint knowledgeProofForX4sV;
 
@@ -165,8 +165,30 @@ public class JPake {
         
         this.Gx1 = G.multiply(x1);
         this.Gx2 = G.multiply(x2);
-        //TODO copy them into the input parameters
+        //TODO fill this into byte[] x3, x4
         
+        BigInteger v1 = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE, 
+        			n.subtract(BigInteger.ONE), new SecureRandom());
+        this.knowledgeProofForX1V = G.multiply(v1);
+        this.knowledgeProofForX1r = JPakeECParam.generateZKPr(G, n, x1, Gx1, knowledgeProofForX1V, v1, Arrays.toString(participantID));
+        //TODO copy this ??
+        
+        BigInteger v2 = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE, 
+        			n.subtract(BigInteger.ONE), new SecureRandom());
+        this.knowledgeProofForX2V = G.multiply(v2);
+        this.knowledgeProofForX2r = JPakeECParam.generateZKPr(G, n, x2, Gx2, knowledgeProofForX1V, v2, Arrays.toString(participantID));
+        //TODO fill this into zkproofs x3, x4
+        
+        ECPoint GB = Gx1.add(Gx2).add(this.Gx3); //is this correct?
+        BigInteger s2 = new BigInteger("1234".getBytes());
+    	ECPoint BtoSend = GB.multiply(x2.multiply(s2).mod(n)); 
+        //todo fill the above into byte[] B
+        
+        BigInteger v2s = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE, 
+        			n.subtract(BigInteger.ONE), new SecureRandom());
+        this.knowledgeProofForX2sV = G.multiply(v2s);
+        this.knowledgeProofForX2sr = JPakeECParam.generateZKPr(G, n, x2.multiply(s2).mod(n), BtoSend, knowledgeProofForX1V, v2s, Arrays.toString(participantID));
+        //TODO fill the above into byte[] knowdledgeProofForX4sV, and BigInteger knowledgeProofForX4sr
         
         return new BigInteger[0];
     }

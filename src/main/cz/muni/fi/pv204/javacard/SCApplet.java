@@ -16,11 +16,15 @@ public class SCApplet extends Applet {
 
     private SCApplet(byte[] bArray, short bOffset, byte bLength) {
         // offset + [PIN_LENGTH | PIN] + [MORE_DATA]
-        SecureChannel.setPin(
-                bArray,
-                (short) (bOffset + 1),
-                bArray[bOffset]
-        );
+        try {
+            SecureChannel.setPin(
+                    bArray,
+                    (short) (bOffset + 1),
+                    bArray[bOffset]
+            );
+        } catch (SecureChannel.UnexpectedError e) {
+            throw new RuntimeException();
+        }
 
         sc = SecureChannel.getSecureChannel();
     }
@@ -46,7 +50,7 @@ public class SCApplet extends Applet {
             length = sc.processIncoming(
                     apdu
             );
-        } catch (Exception e) {
+        } catch (SecureChannel.UnexpectedError e) {
             ISOException.throwIt(ISO7816.SW_UNKNOWN);
         }
 
@@ -57,6 +61,7 @@ public class SCApplet extends Applet {
                 byte data[] = {(byte) 0xFF};
                 Util.arrayCopy(data, (short) 0, buffer, ISO7816.OFFSET_CDATA, (short) 1);
                 apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, (short) 1);
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
                 break;
 
         }

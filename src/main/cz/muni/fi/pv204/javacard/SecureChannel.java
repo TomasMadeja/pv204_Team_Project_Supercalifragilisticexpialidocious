@@ -66,6 +66,12 @@ public class SecureChannel {
     private byte[] keyingMaterial;
     private byte[] challenge;
 
+    public static class UnexpectedError extends Exception {
+        public UnexpectedError() {
+            super();
+        }
+    }
+
     private SecureChannel() {
 //        throw new NotImplementedException();
         rand = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
@@ -79,9 +85,9 @@ public class SecureChannel {
         return sc;
     }
 
-    public static void setPin(byte[] newPin, short offset, byte length) throws RuntimeException {
+    public static void setPin(byte[] newPin, short offset, byte length) throws UnexpectedError {
         if (length != PIN_SIZE) {
-            throw new RuntimeException("Wrong PIN size");
+            throw new UnexpectedError();
         }
         if (pin == null) {
             pin = new JPakePassword((byte) PIN_TRIES , (byte) PIN_SIZE);
@@ -96,7 +102,7 @@ public class SecureChannel {
 
     public short processIncoming(
             APDU apdu
-            ) throws Exception {
+            ) throws UnexpectedError {
 
         byte[] inBuffer = apdu.getBuffer();
         short inOffset = inBuffer[ISO7816.OFFSET_CDATA];
@@ -127,7 +133,6 @@ public class SecureChannel {
             case ROUND_1_ZKP1:
                 checkLength(inLen, (short) (1+SIZE_EC_POINT), (short)255);
                 checkState(command);
-                if (state[0] != command) throw new NotImplementedException();
                 parseZKP(inBuffer, inOffset, inLen, (short) 1);
                 state[0] = ROUND_1_ZKP2;
                 ISOException.throwIt(ISO7816.SW_NO_ERROR);
@@ -178,7 +183,6 @@ public class SecureChannel {
             case ROUND_3_A:
                 checkLength(inLen, SIZE_EC_POINT, SIZE_EC_POINT);
                 checkState(command);
-                if (state[0] != command) throw new NotImplementedException();
                 parseECPoint(inBuffer, inOffset, inLen, A);
                 state[0] = ROUND_3_ZKP1;
                 ISOException.throwIt(ISO7816.SW_NO_ERROR);
@@ -193,8 +197,9 @@ public class SecureChannel {
                 sendSuccess(apdu, outOffset, (short) (challengeLength));
                 break;
             case ROUND_HELLO:
-                if (state[0] != command) throw new NotImplementedException(); // TODO
-                inLen = unwrap(
+                checkLength(inLen, (short) 32, (short) 32);
+                checkState(command);
+                inLen = unCheckedUnwrap(
                         inBuffer, inOffset, inLen,
                         inBuffer, inOffset, inLen
                 );
@@ -203,12 +208,12 @@ public class SecureChannel {
                         outBuffer, outOffset, outLen
                 );
                 state[0] = ESTABLISHED;
-                wrap(outBuffer, outOffset, (short)(2*challengeLength), outBuffer, outOffset, outLen);
+                unCheckedWrap(outBuffer, outOffset, (short)(2*challengeLength), outBuffer, outOffset, outLen);
                 pin.correct();
                 sendSuccess(apdu, outOffset, (short) (2*challengeLength));
                 break;
             default:
-                if (state[0] != ESTABLISHED) throw new NotImplementedException(); // TODO
+                checkState(ESTABLISHED);
                 return unwrap(
                         inBuffer, inOffset, inLen,
                         outBuffer, outOffset, outLen
@@ -226,16 +231,44 @@ public class SecureChannel {
             short outOffset,
             short outLen
     ) {
-        if (state[0] != ESTABLISHED) {
-            throw new NotImplementedException(); // TODO
-        }
+        checkState(ESTABLISHED);
+        return unCheckedWrap(
+                inBuffer, inOffset, inLen,
+                outBuffer, outOffset, outLen
+        );
+    }
+
+    private short unwrap(
+            byte[] inBuffer,
+            short inOffset,
+            short inLen,
+            byte[] outBuffer,
+            short outOffset,
+            short outLen
+    ) {
+        checkState(ESTABLISHED);
+        if (inLen % 16 != 0) ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+        return unCheckedUnwrap(
+                inBuffer, inOffset, inLen,
+                outBuffer, outOffset, outLen
+        );
+    }
+
+    private short unCheckedWrap(
+            byte[] inBuffer,
+            short inOffset,
+            short inLen,
+            byte[] outBuffer,
+            short outOffset,
+            short outLen
+    ) {
         return aes.encrypt(
                 inBuffer, inOffset, inLen,
                 outBuffer, outOffset, outLen
         );
     }
 
-    public short unwrap(
+    private short unCheckedUnwrap(
             byte[] inBuffer,
             short inOffset,
             short inLen,
@@ -298,7 +331,7 @@ public class SecureChannel {
 
     private void parseZKP(
             byte[] incoming, short incomingOffset, short incomingLength, short t
-    ) throws Exception {
+    ) throws UnexpectedError {
         byte[] target;
         switch (t) {
             case 1:
@@ -311,7 +344,7 @@ public class SecureChannel {
                 target = zkp3_v;
                 break;
             default:
-                throw new Exception();
+                throw new UnexpectedError();
         }
         Util.arrayCopy(
                 incoming, incomingOffset,
@@ -396,9 +429,9 @@ public class SecureChannel {
 
     private short prepareForHello(
             byte[] outgoing, short outgoingOffset, short outgoingLength
-    ) throws Exception {
+    ) throws UnexpectedError {
         if (outgoingLength < challengeLength) {
-            throw new Exception(); // TODO
+            throw new UnexpectedError(); // TODO
         }
         jpake.calculateKeyingMaterial(keyingMaterial);
         rand.nextBytes(challenge, (short) 0, challengeLength);
@@ -416,15 +449,11 @@ public class SecureChannel {
             byte[] incoming, short incomingOffset, short incomingLength,
             byte[] outgoing, short outgoingOffset, short outgoingLength
     ) {
-        if (incomingLength != 2*challengeLength || outgoingLength != challengeLength) {
-            throw new NotImplementedException(); // TODO throw something
-        }
-
         for (short i = 0; i < challengeLength; i++) {
             if ( incoming[incomingOffset+challengeLength+i] != (byte) (
                     challenge[i] ^ incoming[incomingOffset+i]
             ) ) {
-                throw new NotImplementedException(); // TODO throw something
+                ISOException.throwIt(ISO7816.SW_DATA_INVALID); // TODO throw something
             }
         }
         rand.nextBytes(outgoing, challengeLength, challengeLength);

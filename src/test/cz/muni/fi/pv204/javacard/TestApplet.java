@@ -2,7 +2,7 @@ package cz.muni.fi.pv204.javacard;
 
 import cz.muni.fi.pv204.host.JCardSymInterface;
 import cz.muni.fi.pv204.host.cardTools.Util;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 import javax.smartcardio.CommandAPDU;

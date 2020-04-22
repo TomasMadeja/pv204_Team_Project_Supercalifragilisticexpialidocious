@@ -282,6 +282,11 @@ public class JPake {
 
     public void calculateKeyingMaterial(
             byte[] keyingMaterial
-    ) { }
+    ) { 
+    BigInteger s2 = new BigInteger("1234".getBytes());
+    BigInteger Kb = JPakeECParam.getSHA256( B.subtract(Gx4.multiply(x2.multiply(s2).mod(n))).multiply(x2).getXCoord().toBigInteger());
+    //TODO save Kb into byte[] keyingMaterial
+    
+    }
 
 }

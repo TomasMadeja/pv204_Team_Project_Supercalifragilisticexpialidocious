@@ -16,7 +16,7 @@ import java.util.Arrays;
 import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.math.ec.ECCurve;
-
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 
 public class JPake {
@@ -125,7 +125,7 @@ public class JPake {
         v = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE,
         			n.subtract(BigInteger.ONE), new SecureRandom());
         ECPoint zkpX2V = G.multiply(v);
-        result[2] = group.generateZKPr(
+        result[1] = group.generateZKPr(
                 G,
                 x2, Gx2,
                 zkpX2V, v,
@@ -133,7 +133,8 @@ public class JPake {
         );
 
         // B (actually B) and ZKP
-        ECPoint GB = Gx1.add(Gx2).add(this.Gx3);
+        ECPoint GB = Gx1.add(this.Gx3).add(this.Gx4);
+        byte[] pass = password.getPassword();
         BigInteger x2s = x2.multiply(new BigInteger(password.getPassword()));
     	ECPoint Bpoint = GB.multiply(x2s);
         
@@ -144,7 +145,7 @@ public class JPake {
                 GB,
                 x2s, Bpoint,
                 zkpX2sV, v,
-                participantID
+                this.participantID
         );
 
         // FILL
@@ -197,12 +198,12 @@ public class JPake {
             BigInteger knowledgeProofForX1r,
             byte[] knowledgeProofForX2V,
             BigInteger knowledgeProofForX2r,
-            byte[] participantId
+            byte[] participantID
     ) {
         try {
 
             ECPoint zkpX1V = curve.decodePoint(knowledgeProofForX1V);
-            this.Gx3 = curve.decodePoint(Gx1);
+            this.Gx3 = group.curve.decodePoint(Gx1);
 
             if (!group.verifyZKP(
                     G, this.Gx3,
@@ -213,14 +214,15 @@ public class JPake {
             }
 
             ECPoint zkpX2V = curve.decodePoint(knowledgeProofForX2V);
-            ECPoint Gx2Point = curve.decodePoint(Gx2);
+            this.Gx4 = curve.decodePoint(Gx2);
             if (!group.verifyZKP(
-                    G, Gx2Point,
+                    G, Gx4,
                     zkpX2V, knowledgeProofForX2r,
                     participantID
             )) {
                 return false;
             }
+
 
         } catch (Exception e) {
             return false;
@@ -241,7 +243,7 @@ public class JPake {
             // B (actually A)
             this.B = curve.decodePoint(A);
 
-            ECPoint GA = Gx1.add(Gx2).add(this.Gx3);
+            ECPoint GA = this.Gx3.add(this.Gx1).add(this.Gx2);
             ECPoint zkpX2sV = curve.decodePoint(knowledgeProofForX2sV);
             if (!group.verifyZKP(
                     GA, this.B,
@@ -260,12 +262,12 @@ public class JPake {
     public byte[] calculateKeyingMaterial()
     {
         BigInteger s = new BigInteger(password.getPassword());
-        ECPoint keyingMaterial = B.subtract(
+        ECPoint keyingMaterial = (B.subtract(
                 Gx4.multiply(
-                        x2.multiply(s)
-                )
-        ).multiply(x2);
-        return keyingMaterial.getEncoded(true);
+                        x2
+                ).multiply(s)
+        )).multiply(x2);
+        return keyingMaterial.getEncoded(false);
     }
 
 }

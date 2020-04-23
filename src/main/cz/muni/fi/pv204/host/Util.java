@@ -214,36 +214,32 @@ public class Util
 
 
 
-    public static BigInteger getSHA256(ECPoint generator, ECPoint V, ECPoint X, String userID) {
+    public static BigInteger getSHA256(ECPoint generator, ECPoint V, ECPoint X, byte[] userID) {
 
     	MessageDigest sha256 = null;
+    	byte[] result = new byte[0];
 
     	try {
     		sha256 = MessageDigest.getInstance("SHA-256");
+    		sha256.reset();
     		
     		byte [] GBytes = generator.getEncoded(false);
     		byte [] VBytes = V.getEncoded(false);
     		byte [] XBytes = X.getEncoded(false);
-    		byte [] userIDBytes = userID.getBytes();
+    		byte [] userIDBytes = userID;
     		
     		// It's good practice to prepend each item with a 4-byte length
-    		sha256.update(ByteBuffer.allocate(4).putInt(GBytes.length).array());
     		sha256.update(GBytes);
-
-    		sha256.update(ByteBuffer.allocate(4).putInt(VBytes.length).array());
     		sha256.update(VBytes);
-
-    		sha256.update(ByteBuffer.allocate(4).putInt(XBytes.length).array());
     		sha256.update(XBytes);
-    		
-    		sha256.update(ByteBuffer.allocate(4).putInt(userIDBytes.length).array());
-    		sha256.update(userIDBytes);    	
-   		
+    		sha256.update(userIDBytes);
+            result = sha256.digest();
+
     	} catch (Exception e) {
     		e.printStackTrace();
     	}
 
-    	return new BigInteger(sha256.digest());
+    	return new BigInteger(result);
     }
     
     public static BigInteger getSHA256(BigInteger K) {

@@ -34,7 +34,7 @@ public class TestApplet {
     public void handshakeTest() throws Exception {
         JCardSymInterface sym = JCardSymInterface.defaultCreateConnect();
 
-        String id = "0123456789";
+        byte[] id = Util.hexStringToByteArray("00010203040506070809");
         char[] password = {'1', '1', '1', '1'};
         SecureChannel channel = new SecureChannel(sym, id, password);
         channel.establishSC();

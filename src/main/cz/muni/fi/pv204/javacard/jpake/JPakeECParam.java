@@ -1,5 +1,6 @@
 package cz.muni.fi.pv204.javacard.jpake;
 
+import cz.muni.fi.pv204.host.cardTools.Util;
 import javacard.security.MessageDigest;
 import org.bouncycastle.math.ec.ECPoint;
 
@@ -22,6 +23,12 @@ public class JPakeECParam {
     }
 
 
+//     group.generateZKPr(
+//            G,
+//            x1, Gx1,
+//            zkpX1V, v,
+//            this.participantID
+//        );
     public BigInteger generateZKPr(
             ECPoint generator,
             BigInteger x, ECPoint X,
@@ -36,7 +43,6 @@ public class JPakeECParam {
     public boolean verifyZKP(ECPoint generator, ECPoint X, ECPoint V, BigInteger r, byte[] userID) {
         /* ZKP: {V=G*v, r} */
         BigInteger h = getSHA256(generator, V, X, userID);
-        ECCurve.Fp ecCurve = (ECCurve.Fp)ecSpec.getCurve();
         BigInteger coFactor = ecSpec.getH();
         BigInteger q = curve.getQ();
         // Public key validation based on p. 25
@@ -57,10 +63,9 @@ public class JPakeECParam {
 
         // 3. Check X lies on the curve
         try {
-            ecCurve.decodePoint(X.getEncoded(false));
+            curve.decodePoint(X.getEncoded(false));
         }
         catch(Exception e){
-            e.printStackTrace();
             return false;
         }
 
@@ -72,12 +77,13 @@ public class JPakeECParam {
 
         // Now check if V = G*r + X*h.
         // Given that {G, X} are valid points on curve, the equality implies that V is also a point on curve.
-        if (V.equals(generator.multiply(r).add(X.multiply(h)))) {
-            return true;
-        }
-        else {
-            return false;
-        }
+        return V.equals(
+                generator
+                        .multiply(r)
+                        .add(
+                                X.multiply(h)
+                        )
+        );
     }
 
     private  BigInteger getSHA256(ECPoint generator, ECPoint V, ECPoint X, byte[] userID) {
@@ -94,7 +100,6 @@ public class JPakeECParam {
                 userID, (short) 0, (short) userID.length,
                 result, (short) 0
         );
-
         return new BigInteger(result);
     }
 }

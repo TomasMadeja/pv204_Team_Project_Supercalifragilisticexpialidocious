@@ -16,8 +16,9 @@ public class SCApplet extends Applet {
 
     private SCApplet(byte[] bArray, short bOffset, byte bLength) {
         // offset + [PIN_LENGTH | PIN] + [MORE_DATA]
+        sc = SecureChannel.getSecureChannel();
         try {
-            SecureChannel.setPin(
+            sc.setPin(
                     bArray,
                     (short) (bOffset + 1),
                     bArray[bOffset]
@@ -25,8 +26,6 @@ public class SCApplet extends Applet {
         } catch (SecureChannel.UnexpectedError e) {
             throw new RuntimeException();
         }
-
-        sc = SecureChannel.getSecureChannel();
     }
 
     public static void install(byte[] bArray, short bOffset, byte bLength) {

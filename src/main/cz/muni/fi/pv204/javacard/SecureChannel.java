@@ -37,8 +37,8 @@ public class SecureChannel {
     public static final byte ROUND_HELLO = 0x41;
     public static final byte ESTABLISHED = 0x42;
 
-    private static SecureChannel sc = null;
-    private static JPakePassword pin = null;
+    private static SecureChannel sc;
+    private JPakePassword pin;
     private JPake jpake;
     private MagicAes aes;
     private RandomData rand;
@@ -99,7 +99,7 @@ public class SecureChannel {
         return sc;
     }
 
-    public static void setPin(byte[] newPin, short offset, byte length) throws UnexpectedError {
+    public void setPin(byte[] newPin, short offset, byte length) throws UnexpectedError {
         if (length != PIN_SIZE) {
             throw new UnexpectedError();
         }
@@ -119,7 +119,7 @@ public class SecureChannel {
             ) throws UnexpectedError {
 
         byte[] inBuffer = apdu.getBuffer();
-        short inOffset = inBuffer[ISO7816.OFFSET_CDATA];
+        short inOffset = ISO7816.OFFSET_CDATA;
         short inLen = apdu.getIncomingLength();
         byte[] outBuffer = inBuffer;
         short outOffset = inOffset;
@@ -209,7 +209,7 @@ public class SecureChannel {
                 sendSuccess(apdu, outOffset, (short) (SIZE_CHALLENGE));
                 break;
             case ROUND_HELLO:
-                checkLength(inLen, (short) 32, (short) 32);
+                checkLength(inLen, (short) (SIZE_CHALLENGE*2), (short) (SIZE_CHALLENGE*2));
                 checkState(command);
                 inLen = unCheckedUnwrap(
                         inBuffer, inOffset, inLen,
@@ -363,11 +363,12 @@ public class SecureChannel {
                 target, (short) 0,
                 SIZE_EC_POINT
         );
-        byte[] tmp = new byte[incomingLength-SIZE_EC_POINT];
+        short l = (short) (incomingLength-SIZE_EC_POINT);
+        byte[] tmp = new byte[l];
         Util.arrayCopy(
                 incoming, (short) (incomingOffset+SIZE_EC_POINT),
-                zkp1_v, (short) 0,
-                (short) (incomingLength-SIZE_EC_POINT)
+                tmp, (short) 0,
+                (short) (l)
         );
         BigInteger tmpBigInteger = new BigInteger(tmp);
         switch (t) {
@@ -436,7 +437,7 @@ public class SecureChannel {
 
     private void validateRound3() {
         if (!jpake.validateRound3PayloadReceived(
-                B,
+                A,
                 zkp1_v, zkp1_r,
                 participantIDA
         )) {
@@ -452,8 +453,12 @@ public class SecureChannel {
             throw new UnexpectedError(); // TODO
         }
         rand.nextBytes(challenge, (short) 0, SIZE_CHALLENGE);
+
+        byte[] keyingMaterial = jpake.calculateKeyingMaterial();
+        System.out.print("Keing material card: ");
+        System.out.println(cz.muni.fi.pv204.host.cardTools.Util.bytesToHex(keyingMaterial));
         aes.generateKey(
-                jpake.calculateKeyingMaterial(),
+                keyingMaterial,
                 challenge
         );
         // Outgoing
@@ -469,6 +474,7 @@ public class SecureChannel {
             byte[] incoming, short incomingOffset, short incomingLength,
             byte[] outgoing, short outgoingOffset, short outgoingLength
     ) {
+        System.out.println(cz.muni.fi.pv204.host.cardTools.Util.bytesToHex(incoming));
         for (short i = 0; i < SIZE_CHALLENGE; i++) {
             if ( incoming[incomingOffset+ SIZE_CHALLENGE +i] != (byte) (
                     challenge[i] ^ incoming[incomingOffset+i]

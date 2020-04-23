@@ -33,8 +33,9 @@ public class SchnorrZKP {
 			this.V = V;
 			this.r = r;
 		}
-    	
-    	public void generateZKP (ECPoint generator, BigInteger n, BigInteger x, ECPoint X, String userID) {
+
+	// knowledgeProofForX3.generateZKP(G, n, x1, Gx1, participantId);
+    	public void generateZKP (ECPoint generator, BigInteger n, BigInteger x, ECPoint X, byte[] userID) {
 
         	/* Generate a random v from [1, n-1], and compute V = G*v */
         	BigInteger v = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE, 
@@ -60,12 +61,11 @@ public class SchnorrZKP {
      * @throws CryptoException if the zero knowledge proof is not correct
      */
     //public boolean verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, ECPoint V, BigInteger r, BigInteger q, String userID) {
-    public boolean verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, BigInteger q, String userID) {	
+    public boolean verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, BigInteger q, byte[] userID) {
     	/* ZKP: {V=G*v, r} */    	    	
     	BigInteger h = Util.getSHA256(generator, V, X, userID);
 		SecP256R1Curve ecCurve = (SecP256R1Curve) ecSpec.getCurve();
     	BigInteger coFactor = ecSpec.getH();
-        BigInteger n = ecSpec.getN();
     	// Public key validation based on p. 25
     	// http://cs.ucsb.edu/~koc/ccs130h/notes/ecdsa-cert.pdf
     	

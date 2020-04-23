@@ -37,7 +37,7 @@ public class Round1Payload
     /**
      * The id of the {@link JPAKEParticipant} who created/sent this payload.
      */
-    private final String participantId;
+    private final byte[] participantId;
 
     /**
      * The value of g^x1
@@ -66,7 +66,7 @@ public class Round1Payload
     private final SchnorrZKP knowledgeProofForX2;
 
     public Round1Payload(
-        String participantId,
+        byte[] participantId,
         ECPoint Gx1,
         ECPoint Gx2,
         SchnorrZKP knowledgeProofForX1,
@@ -86,7 +86,7 @@ public class Round1Payload
         this.knowledgeProofForX2 = knowledgeProofForX2;
     }
 
-    public String getParticipantId()
+    public byte[] getParticipantId()
     {
         return participantId;
     }

@@ -33,7 +33,7 @@ public class Round2Payload
     /**
      * The id of the {@link JPAKEParticipant} who created/sent this payload.
      */
-    private final String participantId;
+    private final byte[] participantId;
 
     /**
      * The value of Gx3, as computed for the 2nd pass.
@@ -62,7 +62,7 @@ public class Round2Payload
     private final SchnorrZKP knowledgeProofForX4s;
 
     public Round2Payload(
-        String participantId,
+        byte[] participantId,
         ECPoint Gx3,
         ECPoint Gx4,
         ECPoint B,
@@ -87,7 +87,7 @@ public class Round2Payload
         this.knowledgeProofForX4s = knowledgeProofForX4s;
     }
 
-    public String getParticipantId()
+    public byte[] getParticipantId()
     {
         return participantId;
     }

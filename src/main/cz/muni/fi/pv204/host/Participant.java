@@ -93,7 +93,7 @@ public class Participant
      * Unique identifier of this participant.
      * The two participants in the exchange must NOT share the same id.
      */
-    private final String participantId;
+    private final byte[] participantId;
 
     /**
      * Shared secret.  This only contains the secret between construction
@@ -126,7 +126,7 @@ public class Participant
     /**
      * The participantId of the other participant in this exchange.
      */
-    private String partnerParticipantId;
+    private byte[] partnerParticipantId;
 
     /**
      * Alice's x1 or Bob's x3.
@@ -177,7 +177,7 @@ public class Participant
      * @throws IllegalArgumentException if password is empty
      */
     public Participant(
-        String participantId,
+        byte[] participantId,
         byte[] password)
     {
         this(
@@ -201,7 +201,7 @@ public class Participant
      * @throws IllegalArgumentException if password is empty
      */
     public Participant(
-        String participantId,
+        byte[] participantId,
         byte[] password,
         ECParameterSpec ecSpec)
     {
@@ -232,7 +232,7 @@ public class Participant
      * @throws IllegalArgumentException if password is empty
      */
     public Participant(
-        String participantId,
+        byte[] participantId,
         byte[] password,
         ECParameterSpec ecSpec,
         Digest digest,
@@ -337,7 +337,6 @@ public class Participant
         SchnorrZKP knowledgeProofForX3 = round1PayloadReceived.getKnowledgeProofForX1();
         SchnorrZKP knowledgeProofForX4 = round1PayloadReceived.getKnowledgeProofForX2();
 
-        Util.validateParticipantIdsDiffer(participantId, round1PayloadReceived.getParticipantId());
         Util.validateGx4(Gx4);
         if(!knowledgeProofForX3.verifyZKP(ecSpec, G, Gx3, q, round1PayloadReceived.getParticipantId()) || //TODO
            !knowledgeProofForX4.verifyZKP(ecSpec, G, Gx4, q, round1PayloadReceived.getParticipantId()) ){
@@ -435,7 +434,6 @@ public class Participant
         SchnorrZKP knowledgeProofForX4 = round2PayloadReceived.getKnowledgeProofForX4();
         
         //these throw exceptions
-        Util.validateParticipantIdsDiffer(participantId, round2PayloadReceived.getParticipantId());
         Util.validateGa(Gb);
         //Util.validateZeroKnowledgeProof(p, q, gB, b, knowledgeProofForX4s, round2PayloadReceived.getParticipantId(), digest);
         
@@ -478,7 +476,7 @@ public class Participant
         BigInteger x2s = Util.calculateX2s(q, x2, s);
         ECPoint A = Util.calculateA(q, GA, x2s);
         SchnorrZKP knowledgeProofForX2s = new SchnorrZKP();
-        knowledgeProofForX2s.generateZKP(GA, n, x2s, B, participantId);
+        knowledgeProofForX2s.generateZKP(GA, n, x2s, A, participantId);
         return new Round3Payload(participantId, A, knowledgeProofForX2s);
     }
 
@@ -501,9 +499,6 @@ public class Participant
         {
             throw new IllegalStateException("Validation already attempted for round3 payload for" + participantId);
         }
-        Util.validateParticipantIdsDiffer(participantId, round3PayloadReceived.getParticipantId());
-        Util.validateParticipantIdsEqual(this.partnerParticipantId, round3PayloadReceived.getParticipantId());
-        
         
         ECPoint A = round3PayloadReceived.getA();
         Util.validateGa(A); //nevím, co se tu má testovat
@@ -565,7 +560,6 @@ public class Participant
          *
          * Also set the field to null as a flag to indicate that the key has already been calculated.
          */
-
         ECPoint keyingMaterial = Util.calculateKeyingMaterial(Gx4, x2, s, B);
 
         /*

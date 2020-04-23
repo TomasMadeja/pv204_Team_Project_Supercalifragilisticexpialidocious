@@ -1,5 +1,6 @@
 package cz.muni.fi.pv204.host;
 
+import cz.muni.fi.pv204.host.cardTools.Util;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.math.ec.ECPoint;
 import org.junit.jupiter.api.Test;
@@ -15,11 +16,11 @@ public class TestParticipant {
         byte[] pin = {0x00,0x01,0x02,0x03};
         byte[] pin2 = {0x00,0x01,0x02,0x03};
         Participant p1 = new Participant(
-                "1234567890",
+                Util.hexStringToByteArray("01020304050607080900"),
                 pin
         );
         Participant p2 = new Participant(
-                "1234567891",
+                Util.hexStringToByteArray("01020304050607080901"),
                 pin2
         );
         p2.validateRound1PayloadReceived(p1.createRound1PayloadToSend());

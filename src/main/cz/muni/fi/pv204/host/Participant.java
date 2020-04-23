@@ -590,6 +590,7 @@ public class Participant
         this.Gx3 = null;
         this.Gx4 = null;
         this.password = null;
+        System.gc();
     }
 
 }

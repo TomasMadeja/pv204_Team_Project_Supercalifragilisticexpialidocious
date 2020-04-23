@@ -2,7 +2,9 @@ package cz.muni.fi.pv204.host;
 
 
 import cz.muni.fi.pv204.host.cardTools.Util;
+import javacard.framework.ISO7816;
 import org.bouncycastle.crypto.CryptoException;
+import sun.plugin.dom.exception.InvalidStateException;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -11,15 +13,15 @@ import javax.smartcardio.CardException;
 import javax.smartcardio.CommandAPDU;
 import javax.smartcardio.ResponseAPDU;
 import java.math.BigInteger;
-import java.security.DigestException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.SecureRandom;
+import java.security.*;
+import java.util.Arrays;
 
 public class SecureChannel {
 
     public static final short CHALLANGE_LENGTH = 32;
     public static final int PASS_LEN = 4;
+    public static final short ROUNDS_PER_KEY = 50;
+
 
     public static final byte[] INS_R1_ID = Util.hexStringToByteArray("08110000" + "0A");
     public static final byte[] INS_R1_GX = Util.hexStringToByteArray("08120000" + "82");
@@ -36,12 +38,14 @@ public class SecureChannel {
     public static final byte[] INS_R3_ZKP1 = Util.hexStringToByteArray("08320000");
 
     public static final byte[] INS_HELLO = Util.hexStringToByteArray("08410000");
+    public static final byte[] INS_RESET = Util.hexStringToByteArray("08420000");
 
     public static final int SIZE_ECPOINT = 65;
     public static final byte SIZE_ECPOINT_BYTE = 0x41;
     public static final int SIZE_ID = 10;
 
     public static final short SW_NO_ERROR = (short) 0x9000;
+
 
     public static class ErrorResponseException extends Exception {
         private short errorCode;
@@ -76,7 +80,8 @@ public class SecureChannel {
     private SecureRandom rand;
     private Participant participant;
     private byte[] participantIDB = new byte[SIZE_ID];
-
+    private short counter;
+    private boolean established;
 
     public SecureChannel(
             JCardSymInterface channel,
@@ -96,6 +101,8 @@ public class SecureChannel {
         rand = SecureRandom.getInstanceStrong();
         aes = new MagicAes();
         participant = new Participant(participantId, p);
+        counter = 0;
+        established = false;
     }
 
     public void establishSC() throws CardException, ErrorResponseException,
@@ -108,11 +115,79 @@ public class SecureChannel {
         validationRound2(r);
         r = establishmentRound3();
         establishmentHello(r);
+        counter = 0;
+        established = true;
+    }
+
+    public void clear() {
         participant.clear();
     }
 
-    public void wrap() { }
-    public void unwrap() {}
+    public boolean isEstablished() {
+        return established;
+    }
+
+    public void reset() throws CardException {
+        if (established) {
+            channel.transmit(new CommandAPDU(INS_RESET));
+        }
+    }
+
+    public ResponseAPDU send(byte[] buffer)
+            throws BadPaddingException, InvalidKeyException, IllegalBlockSizeException,
+            ShortBufferException, InvalidAlgorithmParameterException, DigestException, CardException, InterruptedException {
+        if (!established) throw new InvalidStateException("No connection");
+        if (counter >= ROUNDS_PER_KEY) {
+            established = false;
+            throw new InterruptedException("Counter ran out. COnnection closed");
+        }
+        short l = 0;
+        if (buffer.length < 5) {
+            aes.nextIV();
+            return channel.transmit(new CommandAPDU(buffer));
+        } else {
+            l = (short) (aes.padding.padLength((short) (buffer.length - ISO7816.OFFSET_CDATA)) + buffer.length);
+        }
+        if (l > 256) {
+            throw new InvalidParameterException();
+        }
+        byte[] outBuffer = new byte[l];
+        System.arraycopy(buffer, 0, outBuffer, 0, buffer.length);
+        try {
+            aes.padding.pad(
+                    outBuffer,
+                    (short) ISO7816.OFFSET_CDATA,
+                    (short) (buffer.length - ISO7816.OFFSET_CDATA),
+                    (short) (outBuffer.length - ISO7816.OFFSET_CDATA)
+            );
+        } catch (Exception e) { }
+        l = (short) aes.encrypt(
+                outBuffer, (short) ISO7816.OFFSET_CDATA, (short) (outBuffer.length - ISO7816.OFFSET_CDATA),
+                outBuffer, (short) ISO7816.OFFSET_CDATA, (short) (outBuffer.length - ISO7816.OFFSET_CDATA)
+        );
+        outBuffer[ISO7816.OFFSET_LC] = getLSB(l);
+        if (l > 255) {
+            outBuffer[ISO7816.OFFSET_LC] = 0x00;
+        }
+        counter++;
+        ResponseAPDU response = channel.transmit(new CommandAPDU(outBuffer));
+        Arrays.fill(buffer, (byte) 0x00);
+        return  response;
+    }
+
+    public short decryptDataBuffer(byte[] buffer) throws
+            InvalidAlgorithmParameterException, ShortBufferException, InvalidKeyException,
+            IllegalBlockSizeException, BadPaddingException, DigestException {
+        if (buffer.length == 0) {
+            aes.nextIV();
+            return  0;
+        }
+        aes.decrypt(
+                buffer, (short) 0, (short) buffer.length,
+                buffer, (short) 0, (short) buffer.length
+        );
+        return aes.padding.unpad(buffer, (short) 0, (short) buffer.length);
+    }
 
     private ResponseAPDU establishmentRound1(
     ) throws CardException, ErrorResponseException {
@@ -179,6 +254,7 @@ public class SecureChannel {
 
         return response;
     }
+
 
     private void validationRound2(
             ResponseAPDU response

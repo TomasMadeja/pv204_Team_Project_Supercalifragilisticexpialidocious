@@ -1,6 +1,7 @@
 package cz.muni.fi.pv204.javacard;
 
 import cz.muni.fi.pv204.javacard.crypto.MagicAes;
+import cz.muni.fi.pv204.javacard.crypto.PKCS5Padding;
 import cz.muni.fi.pv204.javacard.jpake.JPake;
 import cz.muni.fi.pv204.javacard.jpake.JPakeECParam;
 import cz.muni.fi.pv204.javacard.jpake.JPakePassword;
@@ -8,12 +9,14 @@ import javacard.framework.*;
 import javacard.security.RandomData;
 
 import java.math.BigInteger;
+import java.security.InvalidParameterException;
 
 
 public class SecureChannel {
 
     public static final short PIN_SIZE = 4;
     public static final short PIN_TRIES = 3;
+    public static final short ROUNDS_PER_KEY = 50;
 
     public static final short SIZE_CHALLENGE = 32; // sha 256 - 128 for AES IV
     public static final short SIZE_ID = 10;
@@ -34,13 +37,14 @@ public class SecureChannel {
     public static final byte ROUND_3_ZKP1 = 0x32;
 
     public static final byte ROUND_HELLO = 0x41;
-    public static final byte ESTABLISHED = 0x42;
+    public static final byte ESTABLISHED = 0x42; // COmmand reset
 
     private static SecureChannel sc;
     private JPakePassword pin;
     private JPake jpake;
     private MagicAes aes;
     private RandomData rand;
+    private PKCS5Padding padding;
 
     private byte[] myID;
     private byte[] state;
@@ -60,6 +64,8 @@ public class SecureChannel {
     private byte[] participantIDA;
     private byte[] challenge;
 
+    private short counter;
+
     public static class UnexpectedError extends Exception {
         public UnexpectedError() {
             super();
@@ -76,6 +82,7 @@ public class SecureChannel {
         rand.nextBytes(myID, (short) 0, SIZE_ID);
         jpake = new JPake(myID, pin, param);
         aes = new MagicAes();
+        padding = new PKCS5Padding((short) 16);
 
         Gx1 = new byte[SIZE_EC_POINT];
         Gx2 = new byte[SIZE_EC_POINT];
@@ -89,6 +96,7 @@ public class SecureChannel {
         participantIDA = new byte[SIZE_ID];
         challenge = new byte[SIZE_CHALLENGE];
 
+        counter = 0;
     }
 
     public static SecureChannel getSecureChannel() {
@@ -207,6 +215,10 @@ public class SecureChannel {
                 state[0] = ROUND_HELLO;
                 sendSuccess(apdu, outOffset, (short) (SIZE_CHALLENGE));
                 break;
+            case ESTABLISHED: // RESET
+                state[0] = 0x00;
+                ISOException.throwIt(ISO7816.SW_NO_ERROR);
+                break;
             case ROUND_HELLO:
                 checkLength(inLen, (short) (SIZE_CHALLENGE*2), (short) (SIZE_CHALLENGE*2));
                 checkState(command);
@@ -221,16 +233,24 @@ public class SecureChannel {
                 state[0] = ESTABLISHED;
                 unCheckedWrap(outBuffer, outOffset, (short)(2* SIZE_CHALLENGE), outBuffer, outOffset, outLen);
                 pin.correct();
+                counter = 0;
                 sendSuccess(apdu, outOffset, (short) (2* SIZE_CHALLENGE));
                 break;
             default:
                 checkState(ESTABLISHED);
-                return unwrap(
+                if (counter >= ROUNDS_PER_KEY ) ISOException.throwIt(ISO7816.SW_COMMAND_NOT_ALLOWED);
+                counter++;
+                if (inLen == 0) {
+                    aes.nextIV();
+                    return 0;
+                }
+                outLen = unwrap(
                         inBuffer, inOffset, inLen,
                         outBuffer, outOffset, outLen
                 );
+                short off = padding.unpad(outBuffer, outOffset, outLen);
+                return (short)(off - outOffset);
         }
-
         return (short) 0;
     }
 
@@ -238,14 +258,29 @@ public class SecureChannel {
             byte[] inBuffer,
             short inOffset,
             short inLen,
-            byte[] outBuffer,
-            short outOffset,
-            short outLen
+            short totalLen
     ) {
         checkState(ESTABLISHED);
+
+        short l;
+        if (inLen < 1) {
+            aes.nextIV();
+            return (short)0;
+        } else {
+            l = (short) (padding.padLength(inLen) + inLen);
+        }
+        if (l > 256 || l > totalLen) {
+            return -1;
+        }
+        padding.pad(
+                inBuffer,
+                inOffset,
+                inLen,
+                totalLen
+        );
         return unCheckedWrap(
-                inBuffer, inOffset, inLen,
-                outBuffer, outOffset, outLen
+                inBuffer, inOffset, l,
+                inBuffer, inOffset, totalLen
         );
     }
 

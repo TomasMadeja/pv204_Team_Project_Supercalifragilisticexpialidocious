@@ -15,12 +15,14 @@ public class MagicAes {
     private MessageDigest sha;
     private Cipher aes;
     private SecretKeySpec key;
+    public final PKCS5Padding padding;
 
     private byte[] iv = new byte[32];
 
     public MagicAes() throws Exception {
         sha = MessageDigest.getInstance("SHA-256");
         aes = Cipher.getInstance("AES/CBC/NoPadding");
+        padding = new PKCS5Padding(16);
     }
 
     public void generateKey(byte[] data, byte[] iv) {
@@ -36,7 +38,8 @@ public class MagicAes {
             byte[] outBuffer,
             short outOffset,
             short outLen
-    ) throws BadPaddingException, ShortBufferException, IllegalBlockSizeException, InvalidAlgorithmParameterException, InvalidKeyException, DigestException {
+    ) throws BadPaddingException, ShortBufferException, IllegalBlockSizeException,
+            InvalidAlgorithmParameterException, InvalidKeyException, DigestException {
         digest(
                 iv, 0, iv.length,
                 iv, 0, iv.length

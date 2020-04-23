@@ -1,6 +1,7 @@
 package cz.muni.fi.pv204.javacard;
 
 import cz.muni.fi.pv204.host.JCardSymInterface;
+import cz.muni.fi.pv204.host.SecureChannel;
 import cz.muni.fi.pv204.host.cardTools.Util;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
@@ -27,6 +28,16 @@ public class TestApplet {
                 )
         );
         System.out.println(Util.bytesToHex(response.getBytes()));
+    }
+
+    @Test
+    public void handshakeTest() throws Exception {
+        JCardSymInterface sym = JCardSymInterface.defaultCreateConnect();
+
+        byte[] id = Util.hexStringToByteArray("00010203040506070809");
+        char[] password = {'1', '1', '1', '1'};
+        SecureChannel channel = new SecureChannel(sym, id, password);
+        channel.establishSC();
     }
 
 }

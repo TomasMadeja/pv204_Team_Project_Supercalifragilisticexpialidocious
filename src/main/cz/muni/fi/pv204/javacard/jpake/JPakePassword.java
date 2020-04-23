@@ -29,4 +29,6 @@ public class JPakePassword extends OwnerPIN {
     public void correct() {
         super.check(password, (short) 0, (byte) password.length);
     }
+
+    public byte[] getPassword() {return password;}
 }

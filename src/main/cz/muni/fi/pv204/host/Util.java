@@ -5,23 +5,19 @@
  */
 package cz.muni.fi.pv204.host;
 
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
-
-import org.bouncycastle.jce.ECNamedCurveTable;
-import org.bouncycastle.math.ec.ECCurve;
-import org.bouncycastle.math.ec.ECPoint;
-
 import org.bouncycastle.crypto.CryptoException;
 import org.bouncycastle.crypto.Digest;
-import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.Mac;
+import org.bouncycastle.crypto.macs.HMac;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.BigIntegers;
 import org.bouncycastle.util.Strings;
+
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 /**
  * Primitives needed for a J-PAKE exchange.
  * Based on J-PAKEUtil by bouncycastle and the EC J-PAKE demo by Hao Feng
@@ -64,9 +60,9 @@ public class Util
      * Converts the given password to a {@link BigInteger}
      * for use in arithmetic calculations.
      */
-    public static BigInteger calculateS(char[] password)
+    public static BigInteger calculateS(byte[] password)
     {
-        return new BigInteger(Strings.toUTF8ByteArray(password));
+        return new BigInteger(password);
     }
     
     /**
@@ -214,36 +210,32 @@ public class Util
 
 
 
-    public static BigInteger getSHA256(ECPoint generator, ECPoint V, ECPoint X, String userID) {
+    public static BigInteger getSHA256(ECPoint generator, ECPoint V, ECPoint X, byte[] userID) {
 
     	MessageDigest sha256 = null;
+    	byte[] result = new byte[0];
 
     	try {
     		sha256 = MessageDigest.getInstance("SHA-256");
+    		sha256.reset();
     		
     		byte [] GBytes = generator.getEncoded(false);
     		byte [] VBytes = V.getEncoded(false);
     		byte [] XBytes = X.getEncoded(false);
-    		byte [] userIDBytes = userID.getBytes();
+    		byte [] userIDBytes = userID;
     		
     		// It's good practice to prepend each item with a 4-byte length
-    		sha256.update(ByteBuffer.allocate(4).putInt(GBytes.length).array());
     		sha256.update(GBytes);
-
-    		sha256.update(ByteBuffer.allocate(4).putInt(VBytes.length).array());
     		sha256.update(VBytes);
-
-    		sha256.update(ByteBuffer.allocate(4).putInt(XBytes.length).array());
     		sha256.update(XBytes);
-    		
-    		sha256.update(ByteBuffer.allocate(4).putInt(userIDBytes.length).array());
-    		sha256.update(userIDBytes);    	
-   		
+    		sha256.update(userIDBytes);
+            result = sha256.digest();
+
     	} catch (Exception e) {
     		e.printStackTrace();
     	}
 
-    	return new BigInteger(sha256.digest());
+    	return new BigInteger(result);
     }
     
     public static BigInteger getSHA256(BigInteger K) {

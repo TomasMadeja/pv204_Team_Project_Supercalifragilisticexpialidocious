@@ -5,14 +5,12 @@
  */
 package cz.muni.fi.pv204.host;
 
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
-import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.jce.spec.ECParameterSpec;
-import org.bouncycastle.math.ec.ECCurve;
+import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.math.ec.custom.sec.SecP256R1Curve;
+
+import java.math.BigInteger;
+import java.security.SecureRandom;
 
 //import cz.muni.fi.pv204.host.Util;
 
@@ -33,8 +31,9 @@ public class SchnorrZKP {
 			this.V = V;
 			this.r = r;
 		}
-    	
-    	public void generateZKP (ECPoint generator, BigInteger n, BigInteger x, ECPoint X, String userID) {
+
+	// knowledgeProofForX3.generateZKP(G, n, x1, Gx1, participantId);
+    	public void generateZKP (ECPoint generator, BigInteger n, BigInteger x, ECPoint X, byte[] userID) {
 
         	/* Generate a random v from [1, n-1], and compute V = G*v */
         	BigInteger v = org.bouncycastle.util.BigIntegers.createRandomInRange(BigInteger.ONE, 
@@ -43,7 +42,7 @@ public class SchnorrZKP {
         	
         	BigInteger h = Util.getSHA256(generator, V, X, userID); // h
 
-        	r = v.subtract(x.multiply(h)).mod(n); // r = v-x*h mod n   	
+        	r = v.subtract(x.multiply(h)); // r = v-x*h mod n
         }
     	
     	public ECPoint getV() {
@@ -60,12 +59,11 @@ public class SchnorrZKP {
      * @throws CryptoException if the zero knowledge proof is not correct
      */
     //public boolean verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, ECPoint V, BigInteger r, BigInteger q, String userID) {
-    public boolean verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, BigInteger q, String userID) {	
+    public boolean verifyZKP(ECParameterSpec ecSpec, ECPoint generator, ECPoint X, BigInteger q, byte[] userID) {
     	/* ZKP: {V=G*v, r} */    	    	
     	BigInteger h = Util.getSHA256(generator, V, X, userID);
 		SecP256R1Curve ecCurve = (SecP256R1Curve) ecSpec.getCurve();
     	BigInteger coFactor = ecSpec.getH();
-        BigInteger n = ecSpec.getN();
     	// Public key validation based on p. 25
     	// http://cs.ucsb.edu/~koc/ccs130h/notes/ecdsa-cert.pdf
     	

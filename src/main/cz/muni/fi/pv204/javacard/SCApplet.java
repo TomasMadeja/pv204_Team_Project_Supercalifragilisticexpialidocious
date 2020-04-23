@@ -1,11 +1,8 @@
 package cz.muni.fi.pv204.javacard;
 
-import cz.muni.fi.pv204.javacard.jpake.JPakeECParam;
-
 import javacard.framework.*;
 
 // Delete me when done implementing
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class SCApplet extends Applet {
 
@@ -16,8 +13,9 @@ public class SCApplet extends Applet {
 
     private SCApplet(byte[] bArray, short bOffset, byte bLength) {
         // offset + [PIN_LENGTH | PIN] + [MORE_DATA]
+        sc = SecureChannel.getSecureChannel();
         try {
-            SecureChannel.setPin(
+            sc.setPin(
                     bArray,
                     (short) (bOffset + 1),
                     bArray[bOffset]
@@ -25,8 +23,6 @@ public class SCApplet extends Applet {
         } catch (SecureChannel.UnexpectedError e) {
             throw new RuntimeException();
         }
-
-        sc = SecureChannel.getSecureChannel();
     }
 
     public static void install(byte[] bArray, short bOffset, byte bLength) {
@@ -43,6 +39,7 @@ public class SCApplet extends Applet {
     }
 
     public void process(APDU apdu) {
+        apdu.setIncomingAndReceive();
         byte[] buffer = apdu.getBuffer();
         short length;
 

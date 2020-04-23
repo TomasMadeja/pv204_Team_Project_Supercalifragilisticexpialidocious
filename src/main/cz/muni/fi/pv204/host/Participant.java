@@ -12,19 +12,17 @@ package cz.muni.fi.pv204.host;
  */
 //package org.bouncycastle.crypto.agreement.jpake;
 
-import java.math.BigInteger;
-import java.security.SecureRandom;
-
 import org.bouncycastle.crypto.CryptoException;
 import org.bouncycastle.crypto.CryptoServicesRegistrar;
 import org.bouncycastle.crypto.Digest;
 import org.bouncycastle.crypto.digests.SHA256Digest;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.spec.ECParameterSpec;
-import org.bouncycastle.math.ec.ECCurve;
-import org.bouncycastle.math.ec.custom.sec.SecP256R1Curve;
-import org.bouncycastle.util.Arrays;
 import org.bouncycastle.math.ec.ECPoint;
+import org.bouncycastle.math.ec.custom.sec.SecP256R1Curve;
+
+import java.math.BigInteger;
+import java.security.SecureRandom;
 
 /**
  * A participant in a Password Authenticated Key Exchange by Juggling (J-PAKE) exchange.
@@ -93,7 +91,7 @@ public class Participant
      * Unique identifier of this participant.
      * The two participants in the exchange must NOT share the same id.
      */
-    private final String participantId;
+    private final byte[] participantId;
 
     /**
      * Shared secret.  This only contains the secret between construction
@@ -103,7 +101,7 @@ public class Participant
      * and the field is set to null.
      * </p>
      */
-    private char[] password = {'1', '2', '3', '4'};
+    private byte[] password;
 
     /**
      * Digest to use during calculations.
@@ -126,7 +124,7 @@ public class Participant
     /**
      * The participantId of the other participant in this exchange.
      */
-    private String partnerParticipantId;
+    private byte[] partnerParticipantId;
 
     /**
      * Alice's x1 or Bob's x3.
@@ -177,8 +175,8 @@ public class Participant
      * @throws IllegalArgumentException if password is empty
      */
     public Participant(
-        String participantId,
-        char[] password)
+        byte[] participantId,
+        byte[] password)
     {
         this(
             participantId,
@@ -201,8 +199,8 @@ public class Participant
      * @throws IllegalArgumentException if password is empty
      */
     public Participant(
-        String participantId,
-        char[] password,
+        byte[] participantId,
+        byte[] password,
         ECParameterSpec ecSpec)
     {
         this(
@@ -232,8 +230,8 @@ public class Participant
      * @throws IllegalArgumentException if password is empty
      */
     public Participant(
-        String participantId,
-        char[] password,
+        byte[] participantId,
+        byte[] password,
         ECParameterSpec ecSpec,
         Digest digest,
         SecureRandom random)
@@ -262,7 +260,7 @@ public class Participant
          * The caller is responsible for clearing the original password array
          * given as input to this constructor.
          */
-        this.password = Arrays.copyOf(password, password.length);
+        this.password = password;
         this.ecSpec = ecSpec;
         this.ecCurve = (SecP256R1Curve) ecSpec.getCurve();  //TODO group.getP(); come up with a compatible solution with the guys
         this.q = ecCurve.getQ();
@@ -337,7 +335,6 @@ public class Participant
         SchnorrZKP knowledgeProofForX3 = round1PayloadReceived.getKnowledgeProofForX1();
         SchnorrZKP knowledgeProofForX4 = round1PayloadReceived.getKnowledgeProofForX2();
 
-        Util.validateParticipantIdsDiffer(participantId, round1PayloadReceived.getParticipantId());
         Util.validateGx4(Gx4);
         if(!knowledgeProofForX3.verifyZKP(ecSpec, G, Gx3, q, round1PayloadReceived.getParticipantId()) || //TODO
            !knowledgeProofForX4.verifyZKP(ecSpec, G, Gx4, q, round1PayloadReceived.getParticipantId()) ){
@@ -435,7 +432,6 @@ public class Participant
         SchnorrZKP knowledgeProofForX4 = round2PayloadReceived.getKnowledgeProofForX4();
         
         //these throw exceptions
-        Util.validateParticipantIdsDiffer(participantId, round2PayloadReceived.getParticipantId());
         Util.validateGa(Gb);
         //Util.validateZeroKnowledgeProof(p, q, gB, b, knowledgeProofForX4s, round2PayloadReceived.getParticipantId(), digest);
         
@@ -478,7 +474,7 @@ public class Participant
         BigInteger x2s = Util.calculateX2s(q, x2, s);
         ECPoint A = Util.calculateA(q, GA, x2s);
         SchnorrZKP knowledgeProofForX2s = new SchnorrZKP();
-        knowledgeProofForX2s.generateZKP(GA, n, x2s, B, participantId);
+        knowledgeProofForX2s.generateZKP(GA, n, x2s, A, participantId);
         return new Round3Payload(participantId, A, knowledgeProofForX2s);
     }
 
@@ -501,9 +497,6 @@ public class Participant
         {
             throw new IllegalStateException("Validation already attempted for round3 payload for" + participantId);
         }
-        Util.validateParticipantIdsDiffer(participantId, round3PayloadReceived.getParticipantId());
-        Util.validateParticipantIdsEqual(this.partnerParticipantId, round3PayloadReceived.getParticipantId());
-        
         
         ECPoint A = round3PayloadReceived.getA();
         Util.validateGa(A); //nevím, co se tu má testovat
@@ -565,9 +558,6 @@ public class Participant
          *
          * Also set the field to null as a flag to indicate that the key has already been calculated.
          */
-        Arrays.fill(password, (char)0);
-        this.password = null;
-
         ECPoint keyingMaterial = Util.calculateKeyingMaterial(Gx4, x2, s, B);
 
         /*
@@ -578,9 +568,6 @@ public class Participant
          * If the ephemeral private keys x1 and x2 are leaked,
          * the attacker might be able to brute-force the password.
          */
-        this.x1 = null;
-        this.x2 = null;
-        this.B = null;
 
         /*
          * Do not clear gx* yet, since those are needed by round 3.
@@ -589,6 +576,20 @@ public class Participant
         this.state = STATE_KEY_CALCULATED;
 
         return keyingMaterial;
+    }
+
+    public void clear() {
+        for (int i = 0; i < password.length; i++) {
+            password[i] = 0x00;
+        }
+        this.x1 = null;
+        this.x2 = null;
+        this.B = null;
+        this.Gx1 = null;
+        this.Gx2 = null;
+        this.Gx3 = null;
+        this.Gx4 = null;
+        this.password = null;
     }
 
 }

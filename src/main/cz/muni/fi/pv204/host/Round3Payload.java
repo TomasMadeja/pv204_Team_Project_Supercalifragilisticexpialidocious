@@ -11,7 +11,9 @@ package cz.muni.fi.pv204.host;
  * @author minh
  */
 //package org.bouncycastle.crypto.agreement.jpake;
+
 import org.bouncycastle.math.ec.ECPoint;
+
 import java.math.BigInteger;
 
 /**
@@ -33,7 +35,7 @@ public class Round3Payload
     /**
      * The id of the {@link JPAKEParticipant} who created/sent this payload.
      */
-    private final String participantId;
+    private final byte[] participantId;
     
     /**
      * The value of A, as computed for the 3rd pass.
@@ -45,7 +47,7 @@ public class Round3Payload
      */
     private final SchnorrZKP knowledgeProofForX2s;
 
-    public Round3Payload(String participantId, ECPoint A, SchnorrZKP knowledgeProofForX2s)
+    public Round3Payload(byte[] participantId, ECPoint A, SchnorrZKP knowledgeProofForX2s)
     {
         Util.validateNotNull(participantId, "participantId");
         Util.validateNotNull(A, "A");
@@ -56,7 +58,7 @@ public class Round3Payload
         this.knowledgeProofForX2s = knowledgeProofForX2s;
     }
 
-    public String getParticipantId()
+    public byte[] getParticipantId()
     {
         return participantId;
     }

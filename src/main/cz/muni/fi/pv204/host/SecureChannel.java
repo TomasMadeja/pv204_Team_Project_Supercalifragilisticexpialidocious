@@ -2,9 +2,7 @@ package cz.muni.fi.pv204.host;
 
 
 import cz.muni.fi.pv204.host.cardTools.Util;
-import org.apache.groovy.json.internal.ArrayUtils;
 import org.bouncycastle.crypto.CryptoException;
-import sun.security.util.ArrayUtil;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -17,7 +15,6 @@ import java.security.DigestException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.SecureRandom;
-import java.security.spec.ECPoint;
 
 public class SecureChannel {
 
@@ -25,20 +22,20 @@ public class SecureChannel {
     public static final int PASS_LEN = 4;
 
     public static final byte[] INS_R1_ID = Util.hexStringToByteArray("08110000" + "0A");
-    public static final byte[] INS_R1_GX = Util.hexStringToByteArray("08120000" + "C3");
+    public static final byte[] INS_R1_GX = Util.hexStringToByteArray("08120000" + "82");
     public static final byte[] INS_R1_ZKP1 = Util.hexStringToByteArray("08130000");
     public static final byte[] INS_R1_ZKP2 = Util.hexStringToByteArray("08140000");
 
-    public static final byte[] INS_R2_GX = Util.hexStringToByteArray("08110000");
-    public static final byte[] INS_R2_B = Util.hexStringToByteArray("08120000");
-    public static final byte[] INS_R2_ZKP1 = Util.hexStringToByteArray("08130000");
-    public static final byte[] INS_R2_ZKP2 = Util.hexStringToByteArray("08140000");
-    public static final byte[] INS_R2_ZKP3 = Util.hexStringToByteArray("08150000");
+    public static final byte[] INS_R2_GX = Util.hexStringToByteArray("08210000");
+    public static final byte[] INS_R2_B = Util.hexStringToByteArray("08220000");
+    public static final byte[] INS_R2_ZKP1 = Util.hexStringToByteArray("08230000");
+    public static final byte[] INS_R2_ZKP2 = Util.hexStringToByteArray("08240000");
+    public static final byte[] INS_R2_ZKP3 = Util.hexStringToByteArray("08250000");
 
     public static final byte[] INS_R3_A = Util.hexStringToByteArray("08310000" + "41");
     public static final byte[] INS_R3_ZKP1 = Util.hexStringToByteArray("08320000");
 
-    public static final byte[] INS_HELLO = Util.hexStringToByteArray("08420000");
+    public static final byte[] INS_HELLO = Util.hexStringToByteArray("08410000");
 
     public static final int SIZE_ECPOINT = 65;
     public static final byte SIZE_ECPOINT_BYTE = 0x41;
@@ -83,19 +80,22 @@ public class SecureChannel {
 
     public SecureChannel(
             JCardSymInterface channel,
-            String participantId,
+            byte[] participantId,
             char[] password
     ) throws Exception {
+        if (participantId.length != SIZE_ID) throw new Exception();
         if (password.length != PASS_LEN) throw new Exception();
-        for (char c : password) {
-            if (! Character.isDigit(c)) throw new Exception();
+        byte[] p = new byte[PASS_LEN];
+        for (int i=0; i < PASS_LEN; i++) {
+            if (! Character.isDigit(password[i])) throw new Exception();
+            p[i] = (byte) (password[i] - '0');
         }
 
         this.channel = channel;
 
         rand = SecureRandom.getInstanceStrong();
         aes = new MagicAes();
-        participant = new Participant(participantId, password);
+        participant = new Participant(participantId, p);
     }
 
     public void establishSC() throws CardException, ErrorResponseException,
@@ -108,6 +108,7 @@ public class SecureChannel {
         validationRound2(r);
         r = establishmentRound3();
         establishmentHello(r);
+        participant.clear();
     }
 
     public void wrap() { }
@@ -117,6 +118,7 @@ public class SecureChannel {
     ) throws CardException, ErrorResponseException {
 
         Round1Payload round1 = participant.createRound1PayloadToSend();
+
         byte[] Gx1 = round1.getGx1().getEncoded(false);
         byte[] Gx2 = round1.getGx2().getEncoded(false);
         byte[] zkp1 = combine(
@@ -127,7 +129,8 @@ public class SecureChannel {
                 round1.getKnowledgeProofForX2().getV().getEncoded(false),
                 round1.getKnowledgeProofForX2().getr().toByteArray()
         );
-        byte[] participantIDA = round1.getParticipantId().getBytes();
+        byte[] participantIDA = round1.getParticipantId();
+        byte[] b = round1.getKnowledgeProofForX2().getr().toByteArray();
 
         byte[] outgoing;
         short offset = 0;
@@ -158,9 +161,7 @@ public class SecureChannel {
         checkResponseAccept(response);
 
         outgoing = zkp1;
-        len[0] = (byte) (
-                SIZE_ECPOINT_BYTE +
-                        getLSB(round1.getKnowledgeProofForX1().getr().toByteArray().length)
+        len[0] = (byte) (getLSB(outgoing.length)
         );
         response = channel.transmit(
                 new CommandAPDU(combine(INS_R1_ZKP1, combine(len, outgoing)))
@@ -169,9 +170,7 @@ public class SecureChannel {
 
 
         outgoing = zkp2;
-        len[0] = (byte) (
-                SIZE_ECPOINT_BYTE +
-                        getLSB(round1.getKnowledgeProofForX1().getr().toByteArray().length)
+        len[0] = (byte) (getLSB(outgoing.length)
         );
         response = channel.transmit(
                 new CommandAPDU(combine(INS_R1_ZKP2, combine(len, outgoing)))
@@ -267,10 +266,9 @@ public class SecureChannel {
         offset = 0; // ZKP X4s
         zkp3 = split(incoming, offset, incoming.length);
 
-
         participant.validateRound2PayloadReceived(
                 new Round2Payload(
-                        new String(participantIDB),
+                        participantIDB,
                         participant.ecCurve.decodePoint(Gx3),
                         participant.ecCurve.decodePoint(Gx4),
                         participant.ecCurve.decodePoint(B),
@@ -306,12 +304,9 @@ public class SecureChannel {
         checkResponseAccept(response);
 
         outgoing = zkp1;
-        len[0] = (byte) (
-                SIZE_ECPOINT_BYTE +
-                        getLSB(round3.getKnowledgeProofForX2s().getr().toByteArray().length)
-        );
+        len[0] = (byte) (getLSB(outgoing.length));
         response = channel.transmit(
-                new CommandAPDU(combine(INS_R1_ZKP1, combine(len, outgoing)))
+                new CommandAPDU(combine(INS_R3_ZKP1, combine(len, outgoing)))
         );
         checkResponseAccept(response);
 
@@ -327,9 +322,7 @@ public class SecureChannel {
         byte[] challenge = response.getData();
 
         checkResponseLength(response, CHALLANGE_LENGTH, CHALLANGE_LENGTH);
-        byte[] keyingMaterial = participant.calculateKeyingMaterial().getEncoded(false);
-
-        aes.generateKey(keyingMaterial, challenge);
+        aes.generateKey(participant.calculateKeyingMaterial().getEncoded(false), challenge);
 
         byte[] r = new byte[CHALLANGE_LENGTH];
         rand.nextBytes(r);
@@ -347,25 +340,26 @@ public class SecureChannel {
                 outgoing, (short) 0, (short) outgoing.length,
                 outgoing, (short) 0, (short) outgoing.length
         );
-        ResponseAPDU apdu = channel.transmit(new CommandAPDU(outgoing));
+        byte[] len = {(byte) (CHALLANGE_LENGTH*2)};
+        response = channel.transmit(new CommandAPDU(combine(INS_HELLO, combine(len, outgoing))));
         checkResponseAccept(response);
         checkResponseLength(response, 2*CHALLANGE_LENGTH, 2*CHALLANGE_LENGTH);
         // handle response
-        byte[] incoming = apdu.getData();
+        byte[] incoming = response.getData();
         aes.decrypt(
                 incoming, (short) 0, (short) incoming.length,
                 incoming, (short) 0, (short) incoming.length
         );
 
         for (short i = 0; i < CHALLANGE_LENGTH; i++) {
-            if ( incoming[CHALLANGE_LENGTH+i] != (byte) (challenge[i] ^ r[i]) ) {
+            if ( incoming[CHALLANGE_LENGTH+i] != (byte) (challenge[i] ^ incoming[i]) ) {
                 throw new IncorrectPasswordException();
             }
         }
     }
 
     private void checkResponseAccept(ResponseAPDU response) throws ErrorResponseException {
-        if ((short) response.getSW() == SW_NO_ERROR ) {
+        if ((short) response.getSW() != SW_NO_ERROR ) {
             throw new ErrorResponseException((short) response.getSW());
         }
     }

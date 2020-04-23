@@ -1,11 +1,8 @@
 package cz.muni.fi.pv204.javacard;
 
-import cz.muni.fi.pv204.javacard.jpake.JPakeECParam;
-
 import javacard.framework.*;
 
 // Delete me when done implementing
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class SCApplet extends Applet {
 

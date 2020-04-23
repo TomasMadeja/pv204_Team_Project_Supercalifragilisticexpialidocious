@@ -5,14 +5,12 @@
  */
 package cz.muni.fi.pv204.host;
 
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
-import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.jce.spec.ECParameterSpec;
-import org.bouncycastle.math.ec.ECCurve;
+import org.bouncycastle.math.ec.ECPoint;
 import org.bouncycastle.math.ec.custom.sec.SecP256R1Curve;
+
+import java.math.BigInteger;
+import java.security.SecureRandom;
 
 //import cz.muni.fi.pv204.host.Util;
 

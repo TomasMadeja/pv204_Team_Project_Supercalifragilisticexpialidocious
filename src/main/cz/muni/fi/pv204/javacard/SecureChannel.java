@@ -3,9 +3,8 @@ package cz.muni.fi.pv204.javacard;
 import cz.muni.fi.pv204.javacard.crypto.MagicAes;
 import cz.muni.fi.pv204.javacard.jpake.JPake;
 import cz.muni.fi.pv204.javacard.jpake.JPakeECParam;
-import javacard.framework.*;
-
 import cz.muni.fi.pv204.javacard.jpake.JPakePassword;
+import javacard.framework.*;
 import javacard.security.RandomData;
 
 import java.math.BigInteger;
@@ -455,8 +454,6 @@ public class SecureChannel {
         rand.nextBytes(challenge, (short) 0, SIZE_CHALLENGE);
 
         byte[] keyingMaterial = jpake.calculateKeyingMaterial();
-        System.out.print("Keing material card: ");
-        System.out.println(cz.muni.fi.pv204.host.cardTools.Util.bytesToHex(keyingMaterial));
         aes.generateKey(
                 keyingMaterial,
                 challenge
@@ -474,7 +471,6 @@ public class SecureChannel {
             byte[] incoming, short incomingOffset, short incomingLength,
             byte[] outgoing, short outgoingOffset, short outgoingLength
     ) {
-        System.out.println(cz.muni.fi.pv204.host.cardTools.Util.bytesToHex(incoming));
         for (short i = 0; i < SIZE_CHALLENGE; i++) {
             if ( incoming[incomingOffset+ SIZE_CHALLENGE +i] != (byte) (
                     challenge[i] ^ incoming[incomingOffset+i]

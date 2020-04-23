@@ -1,13 +1,11 @@
 package cz.muni.fi.pv204.javacard.jpake;
 
-import cz.muni.fi.pv204.host.cardTools.Util;
 import javacard.security.MessageDigest;
+import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.math.ec.ECPoint;
+import org.bouncycastle.math.ec.custom.sec.SecP256R1Curve;
 
 import java.math.BigInteger;
-import org.bouncycastle.jce.spec.ECParameterSpec;
-import org.bouncycastle.math.ec.ECCurve;
-import org.bouncycastle.math.ec.custom.sec.SecP256R1Curve;
 
 
 public class JPakeECParam {

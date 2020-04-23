@@ -11,7 +11,9 @@ package cz.muni.fi.pv204.host;
  * @author minh
  */
 //package org.bouncycastle.crypto.agreement.jpake;
+
 import org.bouncycastle.math.ec.ECPoint;
+
 import java.math.BigInteger;
 
 /**

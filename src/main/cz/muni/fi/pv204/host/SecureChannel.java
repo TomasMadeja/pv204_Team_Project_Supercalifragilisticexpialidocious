@@ -2,10 +2,7 @@ package cz.muni.fi.pv204.host;
 
 
 import cz.muni.fi.pv204.host.cardTools.Util;
-import org.apache.groovy.json.internal.ArrayUtils;
 import org.bouncycastle.crypto.CryptoException;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
-import sun.security.util.ArrayUtil;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -18,7 +15,6 @@ import java.security.DigestException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.SecureRandom;
-import java.security.spec.ECPoint;
 
 public class SecureChannel {
 
@@ -107,13 +103,6 @@ public class SecureChannel {
             InvalidKeyException, IllegalBlockSizeException, ShortBufferException,
             IncorrectPasswordException, InvalidAlgorithmParameterException,
             DigestException {
-
-        byte [] outgoing = new BigInteger("99999999999999999999999999999999999999999999999999999999999999999999999999999999999999").toByteArray();
-        ResponseAPDU response = channel.transmit(
-                new CommandAPDU(combine(INS_R1_ID, outgoing))
-        );
-        checkResponseAccept(response);
-
         ResponseAPDU r;
         r = establishmentRound1();
         validationRound2(r);
@@ -172,9 +161,7 @@ public class SecureChannel {
         checkResponseAccept(response);
 
         outgoing = zkp1;
-        len[0] = (byte) (
-                SIZE_ECPOINT_BYTE +
-                        getLSB(round1.getKnowledgeProofForX1().getr().toByteArray().length)
+        len[0] = (byte) (getLSB(outgoing.length)
         );
         response = channel.transmit(
                 new CommandAPDU(combine(INS_R1_ZKP1, combine(len, outgoing)))
@@ -183,9 +170,7 @@ public class SecureChannel {
 
 
         outgoing = zkp2;
-        len[0] = (byte) (
-                SIZE_ECPOINT_BYTE +
-                        getLSB(round1.getKnowledgeProofForX1().getr().toByteArray().length)
+        len[0] = (byte) (getLSB(outgoing.length)
         );
         response = channel.transmit(
                 new CommandAPDU(combine(INS_R1_ZKP2, combine(len, outgoing)))
@@ -319,10 +304,7 @@ public class SecureChannel {
         checkResponseAccept(response);
 
         outgoing = zkp1;
-        len[0] = (byte) (
-                SIZE_ECPOINT_BYTE +
-                        getLSB(round3.getKnowledgeProofForX2s().getr().toByteArray().length)
-        );
+        len[0] = (byte) (getLSB(outgoing.length));
         response = channel.transmit(
                 new CommandAPDU(combine(INS_R3_ZKP1, combine(len, outgoing)))
         );
@@ -340,10 +322,7 @@ public class SecureChannel {
         byte[] challenge = response.getData();
 
         checkResponseLength(response, CHALLANGE_LENGTH, CHALLANGE_LENGTH);
-        byte[] keyingMaterial = participant.calculateKeyingMaterial().getEncoded(false);
-        System.out.print("Keing material host: ");
-        System.out.println(Util.bytesToHex(keyingMaterial));
-        aes.generateKey(keyingMaterial, challenge);
+        aes.generateKey(participant.calculateKeyingMaterial().getEncoded(false), challenge);
 
         byte[] r = new byte[CHALLANGE_LENGTH];
         rand.nextBytes(r);
@@ -357,7 +336,6 @@ public class SecureChannel {
             );
             outgoing[CHALLANGE_LENGTH+i] = r[i];
         }
-        System.out.println(Util.bytesToHex(outgoing));
         aes.encrypt(
                 outgoing, (short) 0, (short) outgoing.length,
                 outgoing, (short) 0, (short) outgoing.length

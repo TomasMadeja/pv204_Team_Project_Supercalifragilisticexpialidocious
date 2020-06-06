@@ -1,7 +1,7 @@
-```
-!!!
-This repository contains implementation of J-Pake which was a result of an assignament for the Security Technologies project of Masaryk University. The implementation has number of issues, such as secrets not being cleared, and usage of non-Javacard compatible library. It is not fit for use in transfering secrets, nor is actively supported.
-```
+|       |
+| :---: |
+| This repository contains implementation of J-Pake which was a result of an assignament for the Security Technologies project of Masaryk University. The implementation has number of issues, such as secrets not being cleared, and usage of non-Javacard compatible library. It is not fit for use in transfering secrets, nor is actively supported. |
+
 # PV204 Security Technologies Project
 
 Project of [PV204 Security Technologies for Spring, 2020](https://is.muni.cz/course/fi/spring2020/PV204).

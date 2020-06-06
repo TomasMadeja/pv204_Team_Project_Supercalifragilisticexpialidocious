@@ -43,4 +43,4 @@ System.out.println(channel.decryptDataBuffer(buff));
 System.out.println(Util.bytesToHex(buff));
 ```
 
-This also showcases the existing api. This secure channel only provides option to create channel, establish it, and send/recieve data. User is responsible for tracking the size of their APDUS (exception is raised if APDU is too large).
+The secure channel only provides option to establish it, and send/recieve data. Its user is responsible for tracking the size of their APDUS (exception is raised if APDU is too large).
